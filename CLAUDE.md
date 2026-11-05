@@ -13,9 +13,14 @@ jiné město. Komunikuj česky, věcně, a před dlouhými kroky řekni, kolik b
    10–30 min, render 5–10 min na čtverec na Macu s Apple Silicon). U velkého města nabídni nejdřív centrum:
    `--max 4` (jen 4 čtverce kolem středu).
 3. **Texty v `mesto.json`:** zkontroluj rod („Izometrický Liberec“, „Izometrická Chrastava“, „Izometrické Brno“),
-   `podtitul` a `popis`. Když má město MHD s veřejnými jízdními řády GTFS, doplň `mhd.gtfs` (URL zipu), `mhd.zdroj`
-   (název dopravce) a `mhd.zdroj_url`, a upozorni uživatele, ať si ověří podmínky dopravce. Vánoční strom:
-   `vanocni_strom: [lat, lon]` hlavního náměstí.
+   `podtitul` a `popis`. Vánoční strom: `vanocni_strom: [lat, lon]` hlavního náměstí.
+   **MHD:** zeptej se uživatele: „Chceš v mapě i jezdící MHD podle jízdních řádů?“ Když ano, najdi sám, jestli má
+   dopravce města vlastní veřejné GTFS, nebo je město v krajském systému, a doplň `mhd.gtfs` (URL zipu), `mhd.zdroj`
+   (název dopravce) a `mhd.zdroj_url`. Upozorni ho, ať si ověří podmínky dopravce, a po stavbě ať trasy projde v mapě
+   (vozidla jedou po silnicích, nestojí, nejezdí přes domy). Vlaky do mapy nepatří.
+   Prohlížeč kreslí tramvaj jako tmavě červenou T3 a autobus bílý (`drawVehicle` ve `web/app.html`). Když má město
+   trolejbusy, nebo jiné barvy vozidel, nabídni, že dokreslíš vlastní model (trolejbus se sběrači, tramvaj nebo autobus
+   v barvách místního dopravce). Podklad jsou uživatelovy fotky nebo volně licencované fotky z Wikimedia Commons.
 4. **Stavba:** `./postav.sh` (spouštěj na pozadí, běží dlouho). Kroky, které už mají výsledek, přeskakuje.
 5. **Kontrola:** `python compose.py summer 8` udělá `build/nahled_summer.png`. Prohlédni si ho (švy mezi čtverci,
    prázdná místa, divné barvy) a pošli uživateli. Pak `npm run nahled` a mapa běží na http://localhost:8000.
