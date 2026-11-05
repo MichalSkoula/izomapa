@@ -24,7 +24,9 @@ T = lambda n: (csv.DictReader(io.TextIOWrapper(zf.open(n + '.txt'), encoding='ut
 sec = lambda t: (lambda h, m, s: h * 3600 + m * 60 + s)(*map(int, t.split(':')))
 
 AREA = shapely.union_all([shapely.box(x - HALF, y - HALF, x + HALF, y + HALF) for x, y in map(chunk_center, CHUNKS)])
-RT = {r['route_id']: r for r in T('routes') if int(r['route_type'] or 3) in (0, 3)}   # vlaky a lanovky prohlížeč nekreslí
+# tramvaj 0 / 900–906, autobus 3 / 700–716, trolejbus 11 / 800 (kreslí se jako autobus); vlaky a lanovky prohlížeč nekreslí
+KIND = lambda t: 0 if t == 0 or 900 <= t <= 906 else 3 if t in (3, 11, 800) or 700 <= t <= 716 else None
+RT = {r['route_id']: r for r in T('routes') if KIND(int(r['route_type'] or 3)) is not None}
 trips = [t for t in T('trips') if t['route_id'] in RT]
 SN, SXY = {}, {}
 for r in T('stops'):
@@ -71,7 +73,7 @@ TI = {t['trip_id'] for t in trips}; SV = {t['service_id'] for t in trips}
 st = {k: [(q, a_, d_, dist, SN.get(z, '')) for q, a_, d_, dist, z in v] for k, v in st.items() if k in TI}
 routes, RI = [], {}
 for rid in dict.fromkeys(t['route_id'] for t in trips):
-    RI[rid] = len(routes); routes.append([RT[rid]['route_short_name'], int(RT[rid]['route_type'] or 3)])
+    RI[rid] = len(routes); routes.append([RT[rid]['route_short_name'], KIND(int(RT[rid]['route_type'] or 3))])
 services = {}
 for c in T('calendar'):
     if c['service_id'] not in SV: continue
