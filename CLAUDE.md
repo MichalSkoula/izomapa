@@ -16,7 +16,8 @@ jiné město. Komunikuj česky, věcně, a před dlouhými kroky řekni, kolik b
    `podtitul` a `popis`. Vánoční strom: `vanocni_strom: [lat, lon]` hlavního náměstí.
    **MHD:** zeptej se uživatele: „Chceš v mapě i jezdící MHD podle jízdních řádů?“ Když ano, najdi sám, jestli má
    dopravce města vlastní veřejné GTFS, nebo je město v krajském systému, a doplň `mhd.gtfs` (URL zipu), `mhd.zdroj`
-   (název dopravce) a `mhd.zdroj_url`. Upozorni ho, ať si ověří podmínky dopravce, a po stavbě ať trasy projde v mapě
+   (název dopravce) a `mhd.zdroj_url`. Krajské GTFS (IDS JMK, KORDIS) jde taky: `mhd.py` vezme jen autobusy, trolejbusy
+   a tramvaje přes mapu, a když GTFS nemá `shapes.txt`, trasy dopočítá po silnicích (`road_route.py`). Upozorni ho, ať si ověří podmínky dopravce, a po stavbě ať trasy projde v mapě
    (vozidla jedou po silnicích, nestojí, nejezdí přes domy). Vlaky do mapy nepatří.
    Prohlížeč kreslí tramvaj jako tmavě červenou T3 a autobus bílý (`drawVehicle` ve `web/app.html`). Když má město
    trolejbusy, nebo jiné barvy vozidel, nabídni, že dokreslíš vlastní model (trolejbus se sběrači, tramvaj nebo autobus
