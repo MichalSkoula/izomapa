@@ -138,7 +138,8 @@ prep.py         data -> scéna čtverce (budovy, stromy, textury terénu podle r
 render.html     renderer (three.js), render.mjs ho pouští po dlaždicích v Chromiu
 dzi.py          dlaždice -> Deep Zoom pyramidy (WebP) do site/tiles/
 overlay.py      klikací vrstva: obrysy budov, adresy, ulice, místa, doprava
-mhd.py          jízdní řády GTFS -> site/mhd.json
+mhd.py          jízdní řády GTFS -> site/mhd.json (krajské GTFS ořízne na mapu)
+road_route.py   trasy autobusů po silnicích pro GTFS bez shapes.txt (např. IDS JMK)
 hlaseni/        volitelný server: hlášení nepřesností a administrace /admin
 web/app.html    prohlížeč, build_html.py z něj udělá site/index.html
 ```

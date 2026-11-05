@@ -13,7 +13,9 @@ jiné město. Komunikuj česky, věcně, a před dlouhými kroky řekni, kolik b
    `--max 4` (jen 4 čtverce kolem středu).
 3. **Texty v `mesto.json`:** zkontroluj rod („Izometrický Liberec“, „Izometrická Chrastava“, „Izometrické Brno“),
    `podtitul` a `popis`. Když má město MHD s veřejnými jízdními řády GTFS, doplň `mhd.gtfs` (URL zipu), `mhd.zdroj`
-   (název dopravce) a `mhd.zdroj_url`, a upozorni uživatele, ať si ověří podmínky dopravce. Vánoční strom:
+   (název dopravce) a `mhd.zdroj_url`, a upozorni uživatele, ať si ověří podmínky dopravce. Krajské GTFS (IDS JMK, KORDIS)
+   jde taky: `mhd.py` vezme jen autobusy a tramvaje přes mapu, a když GTFS nemá `shapes.txt`, trasy dopočítá po silnicích
+   (`road_route.py`). Trasy pak zkontroluj v prohlížeči. Vánoční strom:
    `vanocni_strom: [lat, lon]` hlavního náměstí.
 4. **Stavba:** `./postav.sh` (spouštěj na pozadí, běží dlouho). Kroky, které už mají výsledek, přeskakuje.
 5. **Kontrola:** `python compose.py summer 8` udělá `build/nahled_summer.png`. Prohlédni si ho (švy mezi čtverci,
