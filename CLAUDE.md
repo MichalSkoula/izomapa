@@ -56,6 +56,7 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
   Ukázka je v `priklady/mista.json`.
 - **Chyby v datech:** špatná výška → zkontroluj `build/dmp_kontrola.csv`; chybějící nebo nesmyslná budova → nejlepší
   je opravit ji v OpenStreetMap (a za pár týdnů se propíše do Overture), jinak pravidlo v `prep.py`.
+- **Barvy střech:** `.venv/bin/python nastroje/strechy.py` (ortofoto po 0,4 m/px, 7 km čtverec ~10 min) vyrobí `assets/strechy_orto.json`, `prep.py` je pak použije u všech budov místo náhodných. Dominanty mají přednost.
 - **Les a pole:** maska lesa z ortofota (`nastroje/les.py`), pole ze ZABAGED (`nastroje/zabaged.py`, `nastroje/pole.py`).
   Když les nesedí, uprav prahy barev v `nastroje/les.py` a ověř na `build/orto_cele.jpg`.
 

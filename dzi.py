@@ -61,10 +61,14 @@ def build(variant, chunk=None):
 WATER = [(64, 124, 190), (92, 196, 230), (72, 132, 196), (186, 210, 228), (150, 168, 184), (58, 96, 136), (236, 240, 240)]
 
 
+# modrošedé střechy (plech, panely): jsou vzácné a median cut je posouval k převládající zeleni do tyrkysové
+ROOF_COOL = [(120, 135, 150), (102, 116, 131), (89, 107, 126), (70, 84, 100), (130, 136, 150)]
+
+
 def palette_with_water(sample, colors):
-    q = sample.quantize(colors=colors - 1 - 3 * len(WATER), method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
-    p = q.getpalette()[:3 * (colors - 1 - 3 * len(WATER))]
-    for r, g, b in WATER:
+    q = sample.quantize(colors=colors - 1 - 3 * len(WATER + ROOF_COOL), method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+    p = q.getpalette()[:3 * (colors - 1 - 3 * len(WATER + ROOF_COOL))]
+    for r, g, b in WATER + ROOF_COOL:
         for k in (1.0, 0.8, 0.66):         # stupně osvětlení terénu ve stínu
             p += [int(r * k), int(g * k), int(b * k)]
     im = Image.new('P', (1, 1)); im.putpalette(p + [0] * (768 - len(p)))
@@ -85,7 +89,7 @@ def quant_alpha(rgba, colors, pal=None):
 
 
 def build_alpha(variant, chunk, img, info):
-    colors = 64 if variant == 'lights' else 160
+    colors = 64 if variant == 'lights' else 160 + 3 * len(ROOF_COOL)       # sloty navíc: ostatní barvy mapy se neposunou
     sample = img.convert('RGB').resize((img.width // 3, img.height // 3), Image.Resampling.NEAREST)
     pal = palette_with_water(sample, colors) if variant != 'lights' else sample.quantize(colors=colors - 1, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
     name = f'c{chunk[0]}_{chunk[1]}' if chunk else None
