@@ -56,6 +56,7 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
   Ukázka je v `priklady/mista.json`.
 - **Chyby v datech:** špatná výška → zkontroluj `build/dmp_kontrola.csv`; chybějící nebo nesmyslná budova → nejlepší
   je opravit ji v OpenStreetMap (a za pár týdnů se propíše do Overture), jinak pravidlo v `prep.py`.
+- **Hustota aut (volitelné):** `.venv/bin/python nastroje/scitani.py` a v `mesto.json` `"doprava": {"kraj": "Název kraje"}`. Volitelně `"useky": {"číslo silnice": ["úsek sčítání", …]}` vybere přesné úseky, jinak se bere medián silnice v kraji. Počet aut na mapě je ilustrace poměrů, ne skutečný počet.
 - **Les a pole:** maska lesa z ortofota (`nastroje/les.py`), pole ze ZABAGED (`nastroje/zabaged.py`, `nastroje/pole.py`).
   Když les nesedí, uprav prahy barev v `nastroje/les.py` a ověř na `build/orto_cele.jpg`.
 
