@@ -6,7 +6,8 @@ jiné město. Komunikuj česky, věcně, a před dlouhými kroky řekni, kolik b
 
 ## Postup pro nové město
 
-1. **Prostředí:** když chybí `.venv` nebo `node_modules`, spusť `./setup.sh`. Python vždy z `.venv`.
+1. **Prostředí:** když chybí `.venv` nebo `node_modules`, spusť `./setup.sh`. Python vždy z `.venv`. Na Windows je to
+   `.venv/Scripts/python` a skripty se pouštějí v Git Bash (`sh ./setup.sh`, `sh ./postav.sh`).
 2. **Založení:** `.venv/bin/python novy_mesto.py "Název"` (víceslovné nebo nejednoznačné názvy: `--dotaz "Název, okres X"`).
    Vypíše počet čtverců 2,3 × 2,3 km. Řekni uživateli, kolik to je a jak dlouho to potrvá (orientačně: stažení
    10–30 min, render 5–10 min na čtverec na Macu s Apple Silicon). U velkého města nabídni nejdřív centrum:
@@ -89,7 +90,7 @@ Ukazuj uživateli výřezy před a po.
   zábradlím. Auta jedou po mostovce (`roads` v info_src), MHD z jízdních řádů přes `decks` v overlay.json (`deckZ` v app.html).
   Tunel kratší než 60 m je podjezd: kreslí se jako cesta (nad ním vede most), delší tunely se nekreslí.
 - `render.html` + `render.mjs`: three.js v headless Chromiu po dlaždicích, varianty `spring summer autumn winter lights`.
-  Na macOS s GPU (Metal). Výstup se může o odstín lišit mezi běhy, proto se renderuje vždy celý čtverec.
+  Na macOS s GPU (Metal), na Windows s GPU (Direct3D 11). Výstup se může o odstín lišit mezi běhy, proto se renderuje vždy celý čtverec.
 - `dzi.py`: paleta a Deep Zoom pyramidy (WebP). `compose.py`: složený náhled. `preview.py`: rychlý náhled pro web.
 - `overlay.py`: klikací vrstva (obrys budovy = konvexní obal půdorysu dole a nahoře). Po úpravě budov vždy spustit
   a obrys zkontrolovat v prohlížeči.
