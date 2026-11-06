@@ -902,7 +902,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     const main = []; for (let i = i0; i < roads.length; i++) if (roads[i].c !== 'service') main.push(i);
     const n0 = cars.length, n = Math.min(110, Math.round(main.length / 6));
     for (let j = 0; j < n && main.length; j++) {
-      const i = n0 + j, r_ = main[Math.floor(rnd(i) * main.length)], c = { r: r_, dir: roads[r_].o || (rnd(i + 9) > 0.5 ? 1 : -1), s: rnd(i + 3) * 50, v: 7 + rnd(i + 5) * 6, col: CARC[i % CARC.length] };
+      const i = n0 + j, r_ = main[Math.floor(rnd(i) * main.length)], c = { r: r_, dir: roads[r_].o || (rnd(i + 9) > 0.5 ? 1 : -1), s: rnd(i + 3) * 50, f: 0.85 + rnd(i + 5) * 0.25, col: CARC[i % CARC.length] };
       if (c.dir < 0) c.s = roads[c.r].L - c.s;
       cars.push(c);
     }
@@ -913,9 +913,12 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     const a = r.w[i - 1], b = r.w[i], pa = r.p[i - 1], pb = r.p[i];
     return { x: a[0] + (b[0] - a[0]) * t, y: a[1] + (b[1] - a[1]) * t, ix: pa[0] + (pb[0] - pa[0]) * t, iy: pa[1] + (pb[1] - pa[1]) * t, d: pa[2] + (pb[2] - pa[2]) * t, dx: b[0] - a[0], dy: b[1] - a[1] };
   }
+  // rychlost podle limitu z dat, jinak odhad podle třídy silnice; c.f je povaha řidiče
+  const CLASS_KMH = { motorway: 110, trunk: 90, primary: 50, secondary: 50, tertiary: 50, unclassified: 40, residential: 30, living_street: 20 };
+  const roadSpeed = (r) => (r.l || CLASS_KMH[r.c] || 40) / 3.6;
   function stepCar(c, dt) {
-    c.s += c.v * dt * c.dir;
     const r = roads[c.r];
+    c.s += roadSpeed(r) * c.f * dt * c.dir;
     if (c.s < 0 || c.s > r.L) {
       const endPt = c.s < 0 ? r.w[0] : r.w[r.w.length - 1];
       const opts = (ends.get(ek(endPt)) || []).filter(([i, dir]) => i !== c.r && roads[i].c !== 'service' && (!roads[i].o || roads[i].o === dir));
