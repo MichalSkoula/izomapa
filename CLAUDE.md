@@ -56,6 +56,7 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
   Ukázka je v `priklady/mista.json`.
 - **Chyby v datech:** špatná výška → zkontroluj `build/dmp_kontrola.csv`; chybějící nebo nesmyslná budova → nejlepší
   je opravit ji v OpenStreetMap (a za pár týdnů se propíše do Overture), jinak pravidlo v `prep.py`.
+- **Typy budov (jen Česko):** `.venv/bin/python nastroje/ruian.py` vyrobí `assets/ruian_budovy.json` (způsob využití a podlaží z veřejné služby RÚIAN). `prep.py` jím doplní jen prázdný nebo obecný typ a podlaží tam, kde není laser. Třída `apartments` znamená plochou střechu, proto ji dostane jen budova, u které plochou střechu potvrdí laser. Po změně je potřeba nový render.
 - **Les a pole:** maska lesa z ortofota (`nastroje/les.py`), pole ze ZABAGED (`nastroje/zabaged.py`, `nastroje/pole.py`).
   Když les nesedí, uprav prahy barev v `nastroje/les.py` a ověř na `build/orto_cele.jpg`.
 
