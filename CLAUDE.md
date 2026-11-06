@@ -57,6 +57,8 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
 - **Chyby v datech:** špatná výška → zkontroluj `build/dmp_kontrola.csv`; chybějící nebo nesmyslná budova → nejlepší
   je opravit ji v OpenStreetMap (a za pár týdnů se propíše do Overture), jinak pravidlo v `prep.py`.
 - **Vlaky:** `"vlak"` v `mesto.json` vybírá model z katalogu `TRAINS` ve `web/app.html`: `regiopanter`, `regioshark`, `regionova`, `vuz810`, `cityelefant`, `rychlik`. Buď text, nebo `{"vychozi": "regionova", "linky": {"číslo linky": "rychlik"}}`, když na mapě jezdí víc druhů. Bez této volby se vlaky nekreslí, potřebují tvary tras v GTFS. Výchozí model je `regionova`. Nový model je jeden řádek v katalogu.
+- **Hustota aut (volitelné):** `.venv/bin/python nastroje/scitani.py` a v `mesto.json` `"doprava": {"kraj": "Název kraje"}`. Volitelně `"useky": {"číslo silnice": ["úsek sčítání", …]}` vybere přesné úseky, jinak se bere medián silnice v kraji. Počet aut na mapě je ilustrace poměrů, ne skutečný počet. Na celé mapě se ukáže nejvýš 1 000 aut, na telefonu, při pomalém připojení a v úsporném režimu 300.
+- **Typy budov (jen Česko):** `.venv/bin/python nastroje/ruian.py` vyrobí `assets/ruian_budovy.json` (způsob využití a podlaží z veřejné služby RÚIAN). `prep.py` jím doplní jen prázdný nebo obecný typ a podlaží tam, kde není laser. Třída `apartments` znamená plochou střechu, proto ji dostane jen budova, u které plochou střechu potvrdí laser. Po změně je potřeba nový render.
 - **Les a pole:** maska lesa z ortofota (`nastroje/les.py`), pole ze ZABAGED (`nastroje/zabaged.py`, `nastroje/pole.py`).
   Když les nesedí, uprav prahy barev v `nastroje/les.py` a ověř na `build/orto_cele.jpg`.
 
