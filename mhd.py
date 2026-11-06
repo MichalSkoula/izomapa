@@ -1,7 +1,7 @@
 """MHD podle jízdních řádů (GTFS, adresa v mesto.json mhd.gtfs) -> site/mhd.json
 
 python mhd.py [--stahnout]   stáhne build/gtfs.zip (při --stahnout nebo když je starší než den) a převede ho:
-  routes   [číslo linky, typ (0 tramvaj, 3 autobus)]
+  routes   [číslo linky, typ (0 tramvaj, 2 vlak, 3 autobus)]
   shapes   trasy ve světových souřadnicích mapy [[x, y], ...] (zjednodušené na 1 m)
   services kalendář {id: [po..ne (7× 0/1), od, do, [přidané dny], [zrušené dny]]}
   trips    [linka, trasa, služba, začátek (s od půlnoci), [Δt, vzdálenost po trase (m)] × zastávky, cíl, [zastávka, Δt příjezdu] × zastávky]
@@ -24,14 +24,14 @@ T = lambda n: (csv.DictReader(io.TextIOWrapper(zf.open(n + '.txt'), encoding='ut
 sec = lambda t: (lambda h, m, s: h * 3600 + m * 60 + s)(*map(int, t.split(':')))
 
 AREA = shapely.union_all([shapely.box(x - HALF, y - HALF, x + HALF, y + HALF) for x, y in map(chunk_center, CHUNKS)])
-# tramvaj 0 / 900–906, autobus 3 / 700–716, trolejbus 11 / 800 (kreslí se jako autobus); vlaky a lanovky prohlížeč nekreslí
-KIND = lambda t: 0 if t == 0 or 900 <= t <= 906 else 3 if t in (3, 11, 800) or 700 <= t <= 716 else None
+# tramvaj 0 / 900–906, autobus 3 / 700–716, trolejbus 11 / 800 (kreslí se jako autobus); vlak 2, jen s volbou "vlak" a s tvary tras (po silnicích jezdit nemůže); lanovky prohlížeč nekreslí
+KIND = lambda t: 0 if t == 0 or 900 <= t <= 906 else 3 if t in (3, 11, 800) or 700 <= t <= 716 else 2 if t == 2 and MESTO.get('vlak') and 'shapes.txt' in zf.namelist() else None
 RT = {r['route_id']: r for r in T('routes') if KIND(int(r['route_type'] or 3)) is not None}
 trips = [t for t in T('trips') if t['route_id'] in RT]
 SN, SXY = {}, {}
 for r in T('stops'):
     SN[r['stop_id']] = r['stop_name']
-    if r['stop_lat']: SXY[r['stop_id']] = tuple(float(v) for v in to_local(float(r['stop_lon']), float(r['stop_lat'])))
+    if r.get('stop_lat'): SXY[r['stop_id']] = tuple(float(v) for v in to_local(float(r['stop_lon']), float(r['stop_lat'])))
 shapes, SI, SLEN = [], {}, {}
 if 'shapes.txt' in zf.namelist():
     used = {t['shape_id'] for t in trips}
@@ -89,7 +89,7 @@ def nid(n):
     return NI[n]
 out = []
 for t in trips:
-    if len(routes[RI[t['route_id']]][0]) > 4: continue           # poptávková doprava apod. bez pravidelné trasy
+    if routes[RI[t['route_id']]][1] != 2 and len(routes[RI[t['route_id']]][0]) > 4: continue   # poptávková doprava apod. bez pravidelné trasy; vlaky mají dlouhá čísla
     s = st.get(t['trip_id'], [])
     if len(s) < 2 or t['shape_id'] not in SI: continue
     L, gl = SLEN[t['shape_id']]; k = L / gl                     # vzdálenost z jízdního řádu -> délka trasy v mapě
