@@ -101,6 +101,7 @@ ale i tak se může splést, proto fakta před zveřejněním ověřte.
 | [ČÚZK](https://geoportal.cuzk.cz/): DMP 1G | výšky budov a tvar střech (laserové skenování) | CC BY 4.0: uvést „© ČÚZK“ |
 | ČÚZK: ortofoto | kde je les, barvy polí | CC BY 4.0 |
 | ČÚZK: ZABAGED | orná půda, louky, sady | CC BY 4.0 |
+| ČÚZK: RÚIAN (volitelné, `nastroje/ruian.py`) | typy budov a počet podlaží | CC BY 4.0 |
 | [Terrarium](https://registry.opendata.aws/terrain-tiles/) (AWS Open Data) | terén | s uvedením zdroje |
 | jízdní řády GTFS dopravce | MHD | **podmínky konkrétního dopravce si ověřte** |
 | [Celostátní sčítání dopravy ŘSD](https://www.rsd.cz/silnice-a-dalnice/scitani-dopravy) (volitelné, `"doprava"` v `mesto.json`) | kolik aut jezdí po které silnici | **podmínky si ověřte**: web ŘSD uvádí CC BY-SA 4.0, u souboru licence není; denní křivka je odhad |
