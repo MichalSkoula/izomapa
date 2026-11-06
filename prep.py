@@ -170,7 +170,8 @@ C = dict(grass=0, garden=1, park=2, meadow=3, forest=4, scrub=5, pitch=6, track=
          industrial=10, parking=11, road=12, marking=13, curb=14, dirt=15, water=16, pool=17, stream=18,
          rail=19, cemetery=20, wetland=21, rock=22, construction=23, footway=24, pool_edge=25, farmland=26,
          cobble=27, grave=28, manhole=29, court_blue=30, zone=31, zone2=32, piste=33, skijump=34,
-         wheat=35, wheat2=36, rape=37, rape2=38, maize=39, maize2=40, soil=41, soil2=42)    # pole: plodina + řádky
+         wheat=35, wheat2=36, rape=37, rape2=38, maize=39, maize2=40, soil=41, soil2=42,
+         plaza=43, plaza2=44, deck=45)    # pole: plodina + řádky
 TW = int(2 * HALF / TEX_RES)
 TWE = TW + 2 * MPX                          # rastry včetně pásu sousedů
 cls = Image.new('L', (TWE, TWE), C['grass'])
@@ -523,6 +524,10 @@ for _, g, c, w, _n in roads:
     if c == 'rail':
         line(g, C['dirt'], 3.2, block=True); line(g, C['rail'], 1.4); continue
     line(g, C[RCLS.get(c, 'road')], w, block=w >= 3)
+# ruční povrchy (assets/upresneni.json, "plochy"): přes cesty, stromy pak určí assets/oblasti.json
+for pl in UP.get('plochy', []):
+    g_ = Polygon([to_local(lo, la) for la, lo in pl['q']])
+    fill(g_, C[pl['k']])
 # středová přerušovaná čára
 for _, g, c, w, _n in roads:
     if c in ('trunk', 'primary', 'secondary', 'tertiary') or (c == 'motorway' and w >= 7):     # dálnice: čára mezi pruhy, ne na sjezdu
@@ -1413,6 +1418,7 @@ if LESM is not None:                         # strom jen tam, kde je na ortofotu
         return h01('z' + wkey(t[0], t[1])) < 0.3 and _sp.contains(Point(t[0], t[1]))
     trees = [t for t in trees if _ok(t)]
 for _o in OBL.values():                      # oblast podle skutečnosti: náhodné stromy pryč, místo nich změřené
+    if _o.get('skryt'): continue
     _q = shapely.prepared.prep(Polygon([to_local(lo, la) for la, lo in _o['poly']]))
     trees = [t for t in trees if not _q.contains(Point(t[0], t[1]))]
     for la, lo, hh, con in _o['trees']:
@@ -1423,6 +1429,13 @@ for t in trees:
     k = (round((t[0] + CX) / 3.0), round((t[1] + CY) / 3.0))
     if k in seen: continue
     seen.add(k); T.append(t)
+for _o in OBL.values():                      # "skryt": změřené stromy na konec a původní jen skrýt (kind = 2), barvy ostatních stromů závisí na pořadí
+    if not _o.get('skryt'): continue
+    _q = shapely.prepared.prep(Polygon([to_local(lo, la) for la, lo in _o['poly']]))
+    T = [t[:4] + (2,) if _q.contains(Point(t[0], t[1])) else t for t in T]
+    for la, lo, hh, con in _o['trees']:
+        x, y = (float(v) for v in to_local(lo, la))
+        if EXT_P.contains(Point(x, y)): T.append((x, y, hh, con, 0))
 tz = ground(np.array([t[0] for t in T]), np.array([t[1] for t in T]))
 trees = [[round(t[0], 2), round(t[1], 2), round(float(z), 2), round(t[2], 1), t[3], t[4]] for t, z in zip(T, tz)]
 print('stromů', len(trees))
@@ -1495,7 +1508,8 @@ SEASON_PAL = {
                'court_blue': (70, 112, 170), 'zone': (255, 0, 220), 'zone2': (0, 230, 230),
                'piste': (150, 178, 92), 'skijump': (98, 160, 150),
                'wheat': (214, 186, 106), 'wheat2': (194, 162, 86), 'rape': (150, 148, 82), 'rape2': (128, 126, 70),
-               'maize': (80, 134, 58), 'maize2': (58, 106, 44), 'soil': (110, 142, 66), 'soil2': (128, 104, 70)},
+               'maize': (80, 134, 58), 'maize2': (58, 106, 44), 'soil': (110, 142, 66), 'soil2': (128, 104, 70),
+               'plaza': (186, 186, 184), 'plaza2': (206, 206, 200), 'deck': (146, 104, 88)},
 }
 sp = dict(SEASON_PAL['summer'])
 sp.update({'grass': (122, 176, 80), 'garden': (132, 184, 86), 'park': (118, 180, 78), 'meadow': (150, 188, 90),
@@ -1518,6 +1532,7 @@ wi.update({'forest': (214, 222, 232), 'scrub': (220, 226, 234), 'paved': (222, 2
            'parking': (176, 180, 188), 'road': (104, 106, 114), 'marking': (190, 192, 196), 'curb': (226, 230, 236),
            'dirt': (214, 214, 218), 'water': (186, 210, 228), 'pool': (150, 168, 184), 'stream': (58, 96, 136),
            'footway': (226, 230, 236), 'cobble': (206, 210, 218), 'pool_edge': (230, 234, 238), 'grave': (222, 226, 232), 'manhole': (90, 92, 98)})
+wi.update({'plaza': (208, 212, 220), 'plaza2': (222, 226, 232), 'deck': (176, 160, 160)})
 SEASON_PAL['winter'] = wi
 
 # kontrolní ohraničení zón upřesněných podle snímků (geo.SAT_OUTLINE, po kontrole vypnout)
