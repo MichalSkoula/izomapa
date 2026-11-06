@@ -45,10 +45,13 @@ UP = json.load(open('assets/upresneni.json')) if os.path.exists('assets/upresnen
 if os.path.exists('assets/strechy_orto.json'):
     for _k, _v in json.load(open('assets/strechy_orto.json')).items(): SAT['b'].setdefault(_k, {})['rc'] = _v
 for _k, _v in UP['b'].items(): SAT['b'][_k] = {**SAT['b'].get(_k, {}), **_v}
+# typy a podlaží z RÚIAN (nastroje/ruian.py): jen kde data typ nemají nebo je obecný
+RUIAN = json.load(open('assets/ruian_budovy.json')) if os.path.exists('assets/ruian_budovy.json') else {}
 # oblasti podle skutečnosti (tuning/oblast.py): stromy z ortofota a DMP, barvy střech, ruční úpravy budov
 OBL = json.load(open('assets/oblasti.json')) if os.path.exists('assets/oblasti.json') else {}
 for _o in OBL.values():
     for _k, _v in list(_o['b_auto'].items()) + list(_o['b'].items()): SAT['b'][_k] = {**SAT['b'].get(_k, {}), **_v}
+HREBENY = json.load(open('assets/hrebeny.json')) if os.path.exists('assets/hrebeny.json') else {}   # nastroje/hrebeny.py
 # změřené výšky z DMP 1G (ČÚZK, CC BY 4.0): id -> [medián, p90] nad terénem. Nerozhodují o typu ani tvaru střechy, jen o výšce
 DMP = json.load(open('assets/dmp_vysky.json')) if os.path.exists('assets/dmp_vysky.json') else {}
 if os.path.exists('assets/dmp_rucne.json'): DMP.update({k: v for k, v in json.load(open('assets/dmp_rucne.json')).items() if not k.startswith('_')})   # ověřená měření z kontrolního seznamu
@@ -170,7 +173,8 @@ C = dict(grass=0, garden=1, park=2, meadow=3, forest=4, scrub=5, pitch=6, track=
          industrial=10, parking=11, road=12, marking=13, curb=14, dirt=15, water=16, pool=17, stream=18,
          rail=19, cemetery=20, wetland=21, rock=22, construction=23, footway=24, pool_edge=25, farmland=26,
          cobble=27, grave=28, manhole=29, court_blue=30, zone=31, zone2=32, piste=33, skijump=34,
-         wheat=35, wheat2=36, rape=37, rape2=38, maize=39, maize2=40, soil=41, soil2=42)    # pole: plodina + řádky
+         wheat=35, wheat2=36, rape=37, rape2=38, maize=39, maize2=40, soil=41, soil2=42,
+         plaza=43, plaza2=44, deck=45)    # pole: plodina + řádky
 TW = int(2 * HALF / TEX_RES)
 TWE = TW + 2 * MPX                          # rastry včetně pásu sousedů
 cls = Image.new('L', (TWE, TWE), C['grass'])
@@ -523,6 +527,10 @@ for _, g, c, w, _n in roads:
     if c == 'rail':
         line(g, C['dirt'], 3.2, block=True); line(g, C['rail'], 1.4); continue
     line(g, C[RCLS.get(c, 'road')], w, block=w >= 3)
+# ruční povrchy (assets/upresneni.json, "plochy"): přes cesty, stromy pak určí assets/oblasti.json
+for pl in UP.get('plochy', []):
+    g_ = Polygon([to_local(lo, la) for la, lo in pl['q']])
+    fill(g_, C[pl['k']])
 # středová přerušovaná čára
 for _, g, c, w, _n in roads:
     if c in ('trunk', 'primary', 'secondary', 'tertiary') or (c == 'motorway' and w >= 7):     # dálnice: čára mezi pruhy, ne na sjezdu
@@ -665,7 +673,8 @@ CLS_CZ = {'house': 'rodinný dům', 'detached': 'rodinný dům', 'residential': 
           'commercial': 'komerční budova', 'church': 'kostel', 'chapel': 'kaple', 'kindergarten': 'mateřská škola',
           'shed': 'kůlna', 'barn': 'stodola', 'service': 'technická budova', 'office': 'kanceláře',
           'semidetached_house': 'dvojdům', 'terrace': 'řadový dům', 'bungalow': 'bungalov', 'hotel': 'hotel',
-          'dormitory': 'kolej', 'hospital': 'zdravotnictví', 'greenhouse': 'skleník', 'roof': 'přístřešek'}
+          'dormitory': 'kolej', 'hospital': 'zdravotnictví', 'greenhouse': 'skleník', 'roof': 'přístřešek',
+          'cabin': 'chata', 'farm': 'usedlost', 'farm_auxiliary': 'hospodářská budova', 'transportation': 'stavba pro dopravu'}
 
 
 def hexcol(s, fallback):
@@ -1009,8 +1018,13 @@ for _, r in bld.iterrows():
         c = r['class'] if isinstance(r['class'], str) else ''
         nm = sname(r)
         key = r.id; area = p.area
+        _ru = RUIAN.get(r.id)
+        if _ru and _ru[0] and c in ('', 'yes', 'residential'):
+            # třída apartments znamená plochou střechu, ale bytový dům může mít šikmou: bez potvrzení laserem zůstane obytný
+            c = 'residential' if _ru[0] == 'apartments' and not (r.id in DMP and DMP[r.id][1] - DMP[r.id][0] < 0.4) else _ru[0]
         if not c and area < 45 and garage_row(p): c = 'garages'
         floors = r.num_floors if r.num_floors == r.num_floors and r.num_floors else None
+        if not floors and _ru and _ru[1] and r.id not in DMP: floors = _ru[1]      # laser má přednost
         hgt = r.height if r.height == r.height and r.height else None
         lm = None
         if c == 'chapel': lm = 'chapel'
@@ -1036,6 +1050,9 @@ for _, r in bld.iterrows():
         if not lm and r.id in DMP and area > 80 and DMP[r.id][0] >= 6 and DMP[r.id][1] - DMP[r.id][0] < 0.4:
             rs = 'flat'
             if tenement or (DMP[r.id][0] >= 11 and c in ('', 'residential', 'apartments', 'yes')): tenement = False; panel = True
+        # i malý dům: laser na celé střeše ve stejné výšce znamená plochou nebo téměř plochou střechu (ověřeno na ortofotu)
+        if not lm and r.id in DMP and area >= 25 and DMP[r.id][0] >= 2.2 and DMP[r.id][1] - DMP[r.id][0] < 0.35:
+            rs = 'flat'; tenement = False
         if lm == 'radnice': rs = 'hipped'
         if URBAN and not lm and rs not in (None, 'flat') and area > 2500: rs = 'flat'
         if c == 'roof': rs = 'flat'                     # přístřešek (nástupiště, zastávka): střecha na sloupech
@@ -1060,6 +1077,7 @@ for _, r in bld.iterrows():
         if np.linalg.norm(e1) < np.linalg.norm(e2): e1, e2 = e2, e1
         L, Wd = float(np.linalg.norm(e1)), float(np.linalg.norm(e2))
         ang = math.atan2(e1[1], e1[0])
+        if HREBENY.get(r.id) == 'S': ang += math.pi / 2; L, Wd = Wd, L      # hřeben podél kratší strany (změřeno laserem)
         parts = []
         if rs != 'flat':
             parts = [[round(obb.centroid.x, 2), round(obb.centroid.y, 2), round(ang, 4), round(L, 2), round(Wd, 2)]] \
@@ -1403,6 +1421,7 @@ if LESM is not None:                         # strom jen tam, kde je na ortofotu
         return h01('z' + wkey(t[0], t[1])) < 0.3 and _sp.contains(Point(t[0], t[1]))
     trees = [t for t in trees if _ok(t)]
 for _o in OBL.values():                      # oblast podle skutečnosti: náhodné stromy pryč, místo nich změřené
+    if _o.get('skryt'): continue
     _q = shapely.prepared.prep(Polygon([to_local(lo, la) for la, lo in _o['poly']]))
     trees = [t for t in trees if not _q.contains(Point(t[0], t[1]))]
     for la, lo, hh, con in _o['trees']:
@@ -1413,6 +1432,13 @@ for t in trees:
     k = (round((t[0] + CX) / 3.0), round((t[1] + CY) / 3.0))
     if k in seen: continue
     seen.add(k); T.append(t)
+for _o in OBL.values():                      # "skryt": změřené stromy na konec a původní jen skrýt (kind = 2), barvy ostatních stromů závisí na pořadí
+    if not _o.get('skryt'): continue
+    _q = shapely.prepared.prep(Polygon([to_local(lo, la) for la, lo in _o['poly']]))
+    T = [t[:4] + (2,) if _q.contains(Point(t[0], t[1])) else t for t in T]
+    for la, lo, hh, con in _o['trees']:
+        x, y = (float(v) for v in to_local(lo, la))
+        if EXT_P.contains(Point(x, y)): T.append((x, y, hh, con, 0))
 tz = ground(np.array([t[0] for t in T]), np.array([t[1] for t in T]))
 trees = [[round(t[0], 2), round(t[1], 2), round(float(z), 2), round(t[2], 1), t[3], t[4]] for t, z in zip(T, tz)]
 print('stromů', len(trees))
@@ -1485,7 +1511,8 @@ SEASON_PAL = {
                'court_blue': (70, 112, 170), 'zone': (255, 0, 220), 'zone2': (0, 230, 230),
                'piste': (150, 178, 92), 'skijump': (98, 160, 150),
                'wheat': (214, 186, 106), 'wheat2': (194, 162, 86), 'rape': (150, 148, 82), 'rape2': (128, 126, 70),
-               'maize': (80, 134, 58), 'maize2': (58, 106, 44), 'soil': (110, 142, 66), 'soil2': (128, 104, 70)},
+               'maize': (80, 134, 58), 'maize2': (58, 106, 44), 'soil': (110, 142, 66), 'soil2': (128, 104, 70),
+               'plaza': (186, 186, 184), 'plaza2': (206, 206, 200), 'deck': (146, 104, 88)},
 }
 sp = dict(SEASON_PAL['summer'])
 sp.update({'grass': (122, 176, 80), 'garden': (132, 184, 86), 'park': (118, 180, 78), 'meadow': (150, 188, 90),
@@ -1508,6 +1535,7 @@ wi.update({'forest': (214, 222, 232), 'scrub': (220, 226, 234), 'paved': (222, 2
            'parking': (176, 180, 188), 'road': (104, 106, 114), 'marking': (190, 192, 196), 'curb': (226, 230, 236),
            'dirt': (214, 214, 218), 'water': (186, 210, 228), 'pool': (150, 168, 184), 'stream': (58, 96, 136),
            'footway': (226, 230, 236), 'cobble': (206, 210, 218), 'pool_edge': (230, 234, 238), 'grave': (222, 226, 232), 'manhole': (90, 92, 98)})
+wi.update({'plaza': (208, 212, 220), 'plaza2': (222, 226, 232), 'deck': (176, 160, 160)})
 SEASON_PAL['winter'] = wi
 
 # kontrolní ohraničení zón upřesněných podle snímků (geo.SAT_OUTLINE, po kontrole vypnout)
@@ -1590,6 +1618,29 @@ def _oneway(r):
             if w_.get('heading') == 'forward': return -1
     return 0
 _ow = [(l, _oneway(r), r['class']) for _, r in seg.iterrows() if r['class'] in DRIVE and r['class'] != 'service' for l in lines(r.geom)]
+# intenzita dopravy ze sčítání ŘSD ("doprava" v mesto.json, data z nastroje/scitani.py): vozidla za 24 h podle čísla silnice
+_cfg = geo.MESTO.get('doprava')
+_sv = {}
+if _cfg:
+    _useky = _cfg.get('useky', {})
+    for s_ in json.load(open('build/scitani.json', encoding='utf-8')):
+        chosen = s_['usek'] in _useky[s_['sil']] if s_['sil'] in _useky else s_['kraj'] == _cfg['kraj']
+        if chosen: _sv.setdefault(s_['sil'], []).append((s_['sv'], s_['nak']))
+    _nak = {k: round(100 * sum(n for _s, n in v) / max(1, sum(s for s, _n in v)), 1) for k, v in _sv.items()}   # % nákladních aut
+    _sv = {k: float(np.median([s for s, _n in v])) for k, v in _sv.items()}
+_V_CLASS = {'trunk': 10000, 'primary': 8000, 'secondary': 3000, 'tertiary': 1500, 'unclassified': 400, 'residential': 300, 'living_street': 100}   # silnice bez sčítání: odhad
+def _intensity(r):
+    routes = r.get('routes')
+    for x in (routes if routes is not None and not isinstance(routes, float) else []):
+        ref = str(x.get('ref') or '').replace(' ', '')
+        if ref in _sv: return _sv[ref], _nak[ref]
+    return _V_CLASS.get(r['class'], 300), 0
+_v = [(l, *_intensity(r)) for _, r in seg.iterrows() if r['class'] in DRIVE and r['class'] != 'service' for l in lines(r.geom)] if _cfg else []
+_v_tree = shapely.STRtree([q[0] for q in _v]) if _v else None
+def piece_intensity(l):
+    m_ = l.interpolate(0.5, normalized=True)
+    near = _v_tree.query(m_.buffer(3.0))
+    return _v[min(near, key=lambda k: _v[k][0].distance(m_))][1:] if len(near) else (None, 0)
 # kruhové objezdy data často jednosměrné nemají: malý kruhový prstenec krátkých úseků, doprava proti směru hodinových ručiček
 _short = [l for l, _o, _c in _ow if l.length < 60]
 _ring_lines = []
@@ -1614,10 +1665,32 @@ def piece_oneway(l):
         src, o = _ow2[k]
         if src.distance(m_) < 0.5: return o * _along(src, l)
     return 0
+# rychlostní limity z dat (km/h): jen trvalé, bez podmínek
+def _limit(r):
+    sl = r.get('speed_limits')
+    if sl is None or isinstance(sl, float): return 0
+    for q in sl:
+        m_ = q.get('max_speed')
+        if m_ and not q.get('when') and q.get('between') is None and m_.get('unit') == 'km/h': return int(m_['value'])
+    return 0
+_sl = [(l, _limit(r)) for _, r in seg.iterrows() if r['class'] in DRIVE and _limit(r) for l in lines(r.geom)]
+_sl_tree = shapely.STRtree([l for l, _q in _sl]) if _sl else None
+def piece_limit(l):
+    if _sl_tree is None: return 0
+    m_ = l.interpolate(0.5, normalized=True)
+    for k in _sl_tree.query(m_.buffer(0.5)):
+        if _sl[k][0].distance(m_) < 0.5: return _sl[k][1]
+    return 0
 def _road(p3, l, c, n):
     o = {'p': p3, 'c': c, 'n': n}
     d_ = piece_oneway(l)
     if d_: o['o'] = d_
+    lim = piece_limit(l)
+    if lim: o['l'] = lim
+    if _v_tree is not None and c != 'service':
+        v_, t_ = piece_intensity(l)
+        o['v'] = int(v_ or _V_CLASS.get(c, 300))
+        if t_: o['t'] = t_
     return o
 graph = [_road([[round(x, 1), round(y, 1), round(float(z), 1)] for (x, y), z in zip(l.coords, ground(*np.array(l.coords).T))], l, c, n)
          for l0, w, c, n in drive_lines for l in lines(l0.intersection(AREA.intersection(CLIP.buffer(-4)))) if l.length > 2]   # auta jen uvnitř mapy, přes šev ano
