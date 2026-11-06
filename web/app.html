@@ -446,14 +446,33 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     ready = true; applyVisibility(); applyTime(); loadMini(); tickReal();
     viewer.viewport.fitBounds(homeBounds(), true);
     // odkaz na místo: #zima-noc@50.76984,15.05836,2 (zeměpisná šířka, délka, přiblížení = šířka výřezu v km)
-    const at = (location.hash.split('@')[1] || '').split(',').map(Number);
-    const hasAt = at.length >= 2 && at.every(Number.isFinite);
-    const pos = goView(hasAt ? at : HOME_VIEW, true);
-    if (pos && hasAt && at[3] === 1) {                           // ...,1 = značka přesně na místě (odkaz z administrace hlášení)
-      const [ix, iy] = pos, el = document.createElement('div'); el.className = 'here-pin';
-      viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(ix / W, iy / W), placement: OpenSeadragon.Placement.CENTER, checkResize: false });
-      onChunk.push(() => { const bb = hit(ix, iy); if (bb) state.sel = bb; });   // budovu na místě zvýraznit, jakmile se načtou data
-    }
+    // ...,1 = značka přesně na místě (odkaz z administrace hlášení); jen jedna značka a jeden čekající výběr, i po dalších odkazech
+    let herePin = null, hereAt = null;
+    onChunk.push(() => { if (!hereAt) return; const bb = hit(...hereAt); if (bb) { state.sel = bb; hereAt = null; } });   // budovu zvýraznit, jakmile se načtou data
+    const goToLink = (imm, home) => {
+      const at = (location.hash.split('@')[1] || '').split(',').map(Number);
+      const hasAt = at.length >= 2 && at.every(Number.isFinite);
+      if (!hasAt && !home) return;
+      if (herePin) { viewer.removeOverlay(herePin); herePin = null; }
+      hereAt = null;
+      const pos = goView(hasAt ? at : HOME_VIEW, imm);
+      if (pos && hasAt && at[3] === 1) {
+        herePin = document.createElement('div'); herePin.className = 'here-pin';
+        viewer.addOverlay({ element: herePin, location: new OpenSeadragon.Point(pos[0] / W, pos[1] / W), placement: OpenSeadragon.Placement.CENTER, checkResize: false });
+        const bb = hit(...pos);
+        if (bb) state.sel = bb; else hereAt = pos;
+      }
+    };
+    goToLink(true, true);
+    // odkaz vložený do už otevřené mapy: stránka se nenačte znovu, takže je potřeba přejít sem (replaceState níže tuto událost nespouští)
+    addEventListener('hashchange', () => {
+      const tok = location.hash.slice(1).split('@')[0].split('-');
+      for (const q of tok) if (SEASON_TOKEN[q]) setSeason(SEASON_TOKEN[q]);
+      // sdílený odkaz má vždy roční období, noc nebo soumrak jen když platí; odkaz jen s polohou denní dobu nemění
+      const denni = tok.includes('noc') ? 1 : tok.includes('soumrak') ? 0.42 : tok.some((q) => SEASON_TOKEN[q]) ? 0 : null;
+      if (denni !== null) { $('realTime').checked = false; state.night = denni; $('night').value = Math.round(denni * 100); applyTime(); }
+      goToLink(false, false);
+    });
     let hashT = null;
     viewer.addHandler('animation-finish', () => { clearTimeout(hashT); hashT = setTimeout(() => {
       const c = viewer.viewport.getCenter(true), [x, y] = imgToWorld(c.x * W, c.y * W), [lon, lat] = lonlat(x, y);
