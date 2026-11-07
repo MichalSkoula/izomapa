@@ -77,7 +77,7 @@ def merge_parts(bs):
     for ps in parts.values():
         hull = MultiPoint([q for b in ps for q in b['ring']]).convex_hull
         out.append({**max(ps, key=lambda b: shapely.geometry.Polygon(b['ring']).area), 'ring': [list(q) for q in hull.exterior.coords[:-1]],
-                    'addr': sorted({a for b in ps for a in b['addr']}), 'base': min(b['base'] for b in ps), 'top': max(b['top'] for b in ps)})
+                    'addr': sorted({a for b in ps for a in b['addr']}), 'base': min(b['base'] for b in ps), 'top': max(b['top'] for b in ps), 'merged': True})
     return out
 
 
@@ -104,6 +104,40 @@ for chunk in chunks:
         pts = [px(x, y, z)[:2] for x, y in ring for z in (b['base'], top)]
         hull = MultiPoint(pts).convex_hull
         if hull.geom_type != 'Polygon': continue
+        sil, fb = [], []
+        roof_geom = None if b.get('merged') else b.get('roof_geometry')
+        for rg, b0, t0 in [(b['ring'], b['base'], b['top'])]:
+            t0 = roof_geom['eave'] if roof_geom else t0 + (0 if b.get('roofboxes') else top - b['top'])
+            lo_ = [px(x, y, b0)[:2] for x, y in rg]; hi_ = [px(x, y, t0)[:2] for x, y in rg]
+            fb.append([[round(x), round(y)] for x, y in lo_])
+            sil += [shapely.geometry.Polygon(lo_), shapely.geometry.Polygon(hi_)]
+            sil += [shapely.geometry.Polygon([lo_[i], lo_[(i + 1) % len(rg)], hi_[(i + 1) % len(rg)], hi_[i]]) for i in range(len(rg))]
+        if roof_geom:
+            # Stejné obdélníky, přesah a výška jako u jednotlivých střešních dílů v render.html.
+            eave = roof_geom['eave']; pitch = math.tan(math.radians(roof_geom.get('pitch', 40))); ov = 0.45
+            for cx_, cy_, angle, length, width in roof_geom['parts']:
+                ca, sa = math.cos(angle), math.sin(angle)
+                def pt(s, t, h):
+                    return px(cx_ + ca * s - sa * t, cy_ + sa * s + ca * t, h)[:2]
+                hl, hw = length / 2 + ov, width / 2 + ov
+                ridge_h = eave + min(width / 2 * pitch, roof_geom['height'] or 7)
+                ridge_len = hl if roof_geom.get('shape', b['roof']) == 'gabled' else max(hl - hw, 0)
+                r0, r1 = pt(-ridge_len, 0, ridge_h), pt(ridge_len, 0, ridge_h)
+                z = eave - ov * pitch
+                c00, c10, c11, c01 = pt(-hl, -hw, z), pt(hl, -hw, z), pt(hl, hw, z), pt(-hl, hw, z)
+                sil += [shapely.geometry.Polygon([c00, c10, r1, r0]), shapely.geometry.Polygon([c11, c01, r0, r1])]
+                if roof_geom.get('shape', b['roof']) == 'gabled':
+                    sil += [shapely.geometry.Polygon([pt(-length / 2, -width / 2, eave), pt(-length / 2, width / 2, eave), pt(-length / 2, 0, ridge_h)]),
+                            shapely.geometry.Polygon([pt(length / 2, -width / 2, eave), pt(length / 2, width / 2, eave), pt(length / 2, 0, ridge_h)])]
+                else:
+                    sil += [shapely.geometry.Polygon([c01, c00, r0]), shapely.geometry.Polygon([c10, c11, r1])]
+        if roof_geom:
+            sil_ = shapely.unary_union([q.buffer(0) for q in sil if q.area > 0])
+            if sil_.geom_type == 'Polygon' and sil_.area > 1:
+                candidate = sil_.simplify(0.6)
+                rounded = shapely.geometry.Polygon([(round(x), round(y)) for x, y in candidate.exterior.coords])
+                if rounded.is_valid and rounded.area > 0: hull = candidate
+        dm = min(px(x, y, b['base'])[2] for x, y in ring)
         cx, cy = ring.mean(axis=0)
         d = px(cx, cy, b['base'])[2]
         church = b['cls'] == 'kostel'
@@ -132,7 +166,7 @@ for chunk in chunks:
         if name: addr_index.append([name, K, cxi, cyi, len(buildings), 'budova'])
         buildings.append({k: v for k, v in {
             'pl': pl,
-            'id': f"{K}:{b['id']}", 'oid': b.get('oid'), 'hull': [[round(x), round(y)] for x, y in list(hull.exterior.coords)[:-1]], 'd': d,
+            'id': f"{K}:{b['id']}", 'oid': b.get('oid'), 'hull': [[round(x), round(y)] for x, y in list(hull.exterior.coords)[:-1]], 'd': d, 'dm': dm, 'fb': fb,
             'name': name, 'text': text, 'cls': b['cls'], 'floors': b['floors'], 'h': None if church else b['h'], 'roof': b['roof'], 'addr': b['addr'],
             'lon': b['lon'], 'lat': b['lat'], 'k': K,
         }.items() if v not in (None, [], '')})
