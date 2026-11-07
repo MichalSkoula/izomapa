@@ -1664,8 +1664,8 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
         if (!shown(r.k)) continue;
         for (const d of [-6, 6]) {                         // výstražník z obou stran koleje (když kus silnice pokračuje)
           if (z[0] + d < 0 || z[0] + d > r.L) continue;
-          const o = along(r, z[0] + d);
-          if (!vis(o.ix, o.iy)) continue;
+          const o = along(r, z[0] + d), dp = depth(o.x, o.y, o.z ?? gz(o.x, o.y));
+          if (!vis(o.ix, o.iy) || occluded(o.ix, o.iy, dp) || occluded(o.ix, o.iy - 30, dp)) continue;   // za budovou (pata nebo výstražník) se nekreslí
           const x = ox + o.ix * sx, y = oy + o.iy * sx, h = 30 * sx, q = Math.max(2.5, 3.4 * sx), ph = Math.floor(now / 500) % 2;
           ctx.fillStyle = '#26262a'; ctx.fillRect(x - q * 0.35, y - h - q * 2.6, q * 0.7, h + q * 2.6);
           ctx.strokeStyle = '#d23a2e'; ctx.lineWidth = q * 0.9; ctx.beginPath();          // výstražný kříž
