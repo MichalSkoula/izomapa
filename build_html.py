@@ -1,6 +1,7 @@
 """Z web/app.html a mesto.json vyrobí site/index.html (texty, meta, sitemap).
 Pokud existuje složka obce/*.json, vyrobí pro každou obec i site/index_<obec>.html a site/obce/<obec>/og.jpg."""
 import html, json, os, re
+from urllib.parse import urljoin
 from PIL import Image
 import geo
 from geo import MESTO
@@ -34,8 +35,10 @@ SABLONA = open('web/app.html', encoding='utf-8').read()
 E = lambda t: html.escape(t or '', quote=True)
 
 
-def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=False):
+def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=False, page_url=None):
     site_url = (M.get('url') or '').rstrip('/')          # plná adresa webu (kvůli og:image a sitemap); prázdné = bez nich
+    page_url = page_url or (site_url + '/' if site_url else '')
+    obrazek_url = urljoin(site_url + '/', og_cesta) if site_url else ''
     mhd = M.get('mhd') or {}
     pohled = M.get('pohled')
     strom = M.get('vanocni_strom')
@@ -57,11 +60,11 @@ def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=Fal
                      if mhd.get('gtfs') and mhd.get('zdroj') else '',
     }
     app = re.sub(r'\{\{(\w+)\}\}', lambda m: fill[m.group(1)], SABLONA)
-    og = f'''<meta property="og:image" content="{site_url}/{og_cesta}">
-<meta property="og:url" content="{site_url}/">
-<link rel="canonical" href="{site_url}/">
+    og = f'''<meta property="og:image" content="{E(obrazek_url)}">
+<meta property="og:url" content="{E(page_url)}">
+<link rel="canonical" href="{E(page_url)}">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="{site_url}/{og_cesta}">
+<meta name="twitter:image" content="{E(obrazek_url)}">
 ''' if site_url else ''
     LD = json.dumps({'@context': 'https://schema.org', '@type': 'WebApplication', 'name': M['titulek'], 'description': M['popis'],
                      'inLanguage': 'cs', 'applicationCategory': 'TravelApplication', 'operatingSystem': 'Web',
@@ -105,4 +108,5 @@ if os.path.isdir('obce'):
         if not f.endswith('.json'): continue
         slug = f[:-5]
         obec = json.load(open(f'obce/{f}', encoding='utf-8'))
-        postav_stranku({**MESTO, **obec}, html_out=f'site/index_{slug}.html', og_cesta=f'obce/{slug}/og.jpg', je_obec=True)
+        obec_url = obec.get('url') or (urljoin(SITE_URL + '/', f'index_{slug}.html') if SITE_URL else None)
+        postav_stranku({**MESTO, **obec, 'url': SITE_URL}, html_out=f'site/index_{slug}.html', og_cesta=f'obce/{slug}/og.jpg', je_obec=True, page_url=obec_url)
