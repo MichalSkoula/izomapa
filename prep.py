@@ -384,14 +384,14 @@ def bridge_parts(r):
         out.append((max(a, t0), t1, True)); a = max(a, t1)
     if a < 1: out.append((a, 1.0, False))
     return out
-_rows, bridge_segs = [], []
+_rows, bridge_segs, _bridge_raw = [], [], []          # _bridge_raw: kusy mostů před spojením (jednosměrky pro mostovky)
 for _, r in seg.iterrows():
     bp = bridge_parts(r)
     if bp is None: _rows.append(r); continue
     for a, b_, isb in bp:
         if b_ - a < 1e-6: continue
         g = shapely.ops.substring(r.geom, a, b_, normalized=True)
-        if isb and g.length >= BRIDGE_MIN: bridge_segs.append((g, r)); continue
+        if isb and g.length >= BRIDGE_MIN: bridge_segs.append((g, r)); _bridge_raw.append((g, r)); continue
         q = r.copy(); q['geom'] = g; _rows.append(q)
 seg = pd.DataFrame(_rows).reset_index(drop=True)
 RW = {'motorway': 18, 'trunk': 12, 'primary': 10, 'secondary': 9, 'tertiary': 8, 'residential': 6, 'unclassified': 6,
@@ -1660,6 +1660,7 @@ def _oneway(r):
             if w_.get('heading') == 'forward': return -1
     return 0
 _ow = [(l, _oneway(r), r['class']) for _, r in seg.iterrows() if r['class'] in DRIVE and r['class'] != 'service' for l in lines(r.geom)]
+_ow += [(l, _oneway(r), r['class']) for g_, r in _bridge_raw if r['class'] in DRIVE and r['class'] != 'service' for l in lines(g_)]   # mosty jsou ze seg vyčleněné: bez tohohle by mostovka dvouproudé silnice byla obousměrná
 # intenzita dopravy ze sčítání ŘSD ("doprava" v mesto.json, data z nastroje/scitani.py): vozidla za 24 h podle čísla silnice
 _cfg = geo.MESTO.get('doprava')
 _sv = {}

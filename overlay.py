@@ -143,7 +143,8 @@ for chunk in chunks:
     for r in src['roads']:
         p = r['p']
         if len(p) < 2: continue
-        roads.append({'c': r['c'], 'k': K, 'p': [list(px(x, y, z)) for x, y, z in p], 'w': [[x + OFF[0], y + OFF[1]] for x, y, z in p], **({'o': r['o']} if r.get('o') else {}), **({'l': r['l']} if r.get('l') else {}), **({'v': r['v']} if r.get('v') else {}), **({'t': r['t']} if r.get('t') else {}), **({'x': 1} if r.get('x') else {})})
+        roads.append({'c': r['c'], 'k': K, 'p': [list(px(x, y, z)) for x, y, z in p], 'w': [[x + OFF[0], y + OFF[1], round(z, 1)] for x, y, z in p],   # z: auto na mostovce jede ve výšce mostovky
+                       **({'o': r['o']} if r.get('o') else {}), **({'l': r['l']} if r.get('l') else {}), **({'v': r['v']} if r.get('v') else {}), **({'t': r['t']} if r.get('t') else {}), **({'x': 1} if r.get('x') else {})})
 
     gs = np.array(src['ground_small'])[::2, ::2]     # 41 × 41 stačí na dopravu a klikání
     grounds.append({'cx': OFF[0], 'cy': OFF[1], 'g': [[round(v, 1) for v in row] for row in gs.tolist()]})
@@ -166,7 +167,7 @@ for chunk in chunks:
         _lt = shapely.STRtree(ln_); _pt = shapely.points([(t[0], t[1]) for t in T_])
         hit_ = _lt.query(_pt, predicate='dwithin', distance=45)
         _ok = sorted({int(i) for i, k in zip(*hit_) if ln_[k].distance(_pt[i]) < max(9.0, 1.7 * T_[i][3])})
-        vtrees = [[round(T_[i][0] + OFF[0], 1), round(T_[i][1] + OFF[1], 1), round(T_[i][2], 1), round(T_[i][3], 1), T_[i][4]] for i in _ok]
+        vtrees = [[round(T_[i][0] + OFF[0], 2), round(T_[i][1] + OFF[1], 2), round(T_[i][2], 1), T_[i][3], T_[i][4], T_[i][5] if len(T_[i]) > 5 else 0] for i in _ok]   # 2 desetinná místa: prohlížeč podle nich vybere stejnou kresbu stromu jako renderer
     per_chunk[K] = {'buildings': buildings, 'chimneys': chimneys, 'roads': roads, 'water': water.pop(K), 'pistes': pistes, 'trees': vtrees}
 
 
