@@ -30,7 +30,9 @@ const linuxExe = process.platform === 'linux' && ['/opt/pw-browsers/chromium-119
 const launch = (args) => chromium.launch({ ...(linuxExe ? { executablePath: linuxExe } : {}), args });
 let browser, page;
 if (process.platform === 'linux') {
-  const hasDri = fs.existsSync('/dev/dri') && fs.readdirSync('/dev/dri').some((f) => f.startsWith('renderD'));
+  let hasDri = false;
+  try { hasDri = fs.existsSync('/dev/dri') && fs.readdirSync('/dev/dri').some((f) => f.startsWith('renderD')); }
+  catch { console.warn('GPU: nelze přečíst /dev/dri, zkouším SwiftShader'); }
   if (hasDri) {
     try {
       browser = await launch(['--no-sandbox', '--use-gl=angle', '--use-angle=gl-egl', '--enable-gpu', '--ignore-gpu-blocklist']);
