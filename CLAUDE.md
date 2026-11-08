@@ -47,10 +47,11 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
     `win` styl oken, `face` [lat, lon] bodu, ke kterému je průčelí (náměstí),
   - `towers` [{`at` front/back/c/n/s/e/w…, `side` posun podél průčelí, `w`, `h`, `top` spire/helm/tiered/dome/pyramid/cone/none,
     `to` výška špičky, `tc` barva, `clock`, `round`, `stone`, `ruin`}], `chimneys`, `blocks` (nástavby), `canopy`, `skylights`,
-  - `lm` vlastní model z `render.html` (`radnice` je ukázka, jak model napsat),
+  - `lm` vlastní model: specifické modely pro dané město nepiš do `render.html`, ale do `assets/custom_models.js` (ukázka v `priklady/custom_models.js`), v `dominanty.json` pak stačí `spec: {"lm": "nazev_modelu"}`.
   - `only`: samostatná stavba bez budovy v datech (zřícenina, rozhledna).
   Napárování na budovu: bod uvnitř půdorysu, jinak největší budova do 25 m (`match_doms` v `prep.py`).
   Ukázka je v `priklady/dominanty.json`.
+- **Vlastní kód a lokální úpravy města nepatří do sdíleného `prep.py` ani `render.html`!** Pro specifické úpravy terénu, hřbitovů a rekvizit použij `assets/custom_prep.py` (fáze `HOOK` `terrain` / `cemetery` / `props`, ukázka v `priklady/custom_prep.py`). Pro specifické 3D modely použij `assets/custom_models.js`. Oba soubory jsou v `.gitignore` a načítají se automaticky, takže hlavní kód zůstává čistý pro upstream git.
 - **Příběhy míst** → `mista.json`: `[{"nazev", "lat", "lon", "text"}]`. Texty piš jen z ověřených zdrojů (web obce,
   Památkový katalog, Wikipedie s odkazem). Když si nejsi jistý, zeptej se uživatele. Nic si nevymýšlej.
   Ukázka je v `priklady/mista.json`.
