@@ -66,6 +66,7 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
 - **Komíny, věže, nádrže, potrubí:** `.venv/bin/python nastroje/kominy.py` vyrobí `assets/kominy.json` a `assets/potrubi.json` z OSM (výška z tagu `height`). Komín od 100 m dostane výstražné pruhy. Vzhled jednoho komína: `assets/upresneni.json`, `"kominy": [{"lat", "lon", "wc": barva, "pr": 0}]`. Po změně je potřeba nový render dotčených čtverců.
 - **Les a pole:** maska lesa z ortofota (`nastroje/les.py`), pole ze ZABAGED (`nastroje/zabaged.py`, `nastroje/pole.py`).
   Když les nesedí, uprav prahy barev v `nastroje/les.py` a ověř na `build/orto_cele.jpg`.
+- **Stáda zvířat (krávy, koně, srnky):** `assets/upresneni.json`, `"stada": [{"typ": "kravy"|"kone"|"srnky", "lat": ..., "lon": ..., "pocet": 10, "radius": 35}]`. Stádo se chová podle ročního období a denní doby (v zimě/sněhu a v noci/tmě se semkne do těsného hloučku, na podzim/v dešti drží skupinky, v létě a na jaře se pase po celé ploše pastviny; na jaře se u matek objevují novorozená mláďata – telata, hříbata, srnčata).
 
 Rychlá kontrola jednoho místa bez celého čtverce:
 `python prep.py data_c0_-1 0,-1` a `node render.mjs mpp=0.2 dir=build/c0_-1 out=build/test season=summer alpha=1 "tiles=7_3;7_4"`.
