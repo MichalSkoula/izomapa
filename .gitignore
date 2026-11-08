@@ -34,4 +34,5 @@ assets/oblasti.json
 .wrangler/
 assets/ruian_budovy.json
 assets/kominy.json
+assets/prejezdy.json
 assets/potrubi.json
