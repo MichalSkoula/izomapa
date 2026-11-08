@@ -276,7 +276,6 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     <div class="layers">
       <label><input type="checkbox" id="l-labels" checked> Popisky</label>
       <label><input type="checkbox" id="l-traffic" checked> Doprava</label>
-      <label><input type="checkbox" id="l-planes" checked> Letadla</label>
       <label><input type="checkbox" id="l-smoke" checked> Kouř z komínů</label>
       <label><input type="checkbox" id="l-hover" checked> Zvýraznit budovy</label>
     </div>
@@ -573,12 +572,6 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   }
   document.querySelectorAll('[data-wip]').forEach((b) => b.addEventListener('click', () => { state.wip = b.dataset.wip === '1'; applyVisibility(); viewer.viewport.fitBounds(homeBounds()); }));
   document.querySelectorAll('[data-wip]').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.wip === '1') === state.wip)));
-  const savePlanes = (v) => { try { localStorage.setItem('izo-planes', v ? '1' : '0'); } catch {} };
-  let planesOff = false; try { planesOff = localStorage.getItem('izo-planes') === '0'; } catch {}
-  if ($('l-planes')) {
-    $('l-planes').checked = !planesOff;
-    $('l-planes').addEventListener('change', (e) => savePlanes(e.target.checked));
-  }
   setSeason(state.season); setWeather(state.weather); applyRealWeather();
   $('night').value = Math.round(state.night * 100);
   $('night').addEventListener('input', (e) => { state.night = e.target.value / 100; $('realTime').checked = false; saveRT(false); applyTime(); });
@@ -770,7 +763,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   const vpToImg = (pos) => { const p = viewer.viewport.viewerElementToViewportCoordinates(pos); return [p.x * W, p.y * W]; };
   viewer.addHandler('canvas-click', (e) => {
     if (!e.quick) return;
-    if ($('l-planes')?.checked && typeof PLANES !== 'undefined') {
+    if (typeof PLANES !== 'undefined') {
       const pl = PLANES.drawn.find((q) => Math.hypot(q[0] - e.position.x, q[1] - e.position.y) < 26);
       if (pl) { planeFollow(pl[2]); return; }
     }
@@ -783,7 +776,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   $('osd').addEventListener('pointermove', (e) => {
     const r = $('osd').getBoundingClientRect();
     const mx = e.clientX - r.left, my = e.clientY - r.top;
-    if ($('l-planes')?.checked && typeof PLANES !== 'undefined') {
+    if (typeof PLANES !== 'undefined') {
       PLANES.hover = PLANES.drawn.find((q) => Math.hypot(q[0] - mx, q[1] - my) < 26)?.[2] || null;
       if (PLANES.hover) { $('osd').style.cursor = 'pointer'; return; }
     }
@@ -2265,7 +2258,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
       });
     }
     // letadla (v úrovni mraků a nad nimi)
-    if ({{LETADLA}} && $('l-planes')?.checked) {
+    if ({{LETADLA}}) {
       stepPlanes(dt, now);
       drawPlanes(sx, ox, oy, night, now, cw, ch);
     }

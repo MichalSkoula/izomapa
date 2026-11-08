@@ -15,7 +15,6 @@ class LetadlaTest(unittest.TestCase):
             env = {**os.environ, 'PYTHONPATH': str(ROOT)}
             subprocess.run([sys.executable, str(ROOT / 'build_html.py')], cwd=d, env=env, check=True, capture_output=True)
             html = (d / 'site/index.html').read_text(encoding='utf-8')
-            self.assertIn('id="l-planes"', html)
             self.assertIn('if (true) {', html)
             self.assertIn('OpenSky Network', html)
 
