@@ -109,6 +109,18 @@ for t in trips:
 # čekání na konečné (q[7] = s do odjezdu, kdy vůz už stojí na první zastávce): GTFS čekání nezná, spoj začíná až odjezdem
 print('spojů s čekáním na konečné', cekani_na_konecne(out, lambda q: routes[q[0]][1]))
 out.sort(key=lambda q: q[3])
+# zastávky na mapě (prohlížeč z nich po kliknutí ukáže odjezdy, hledání je najde): [jméno, x, y, druh 0 tramvaj / 3 autobus]
+_obsl = {}
+for q in out:
+    if routes[q[0]][1] == 2: continue
+    for i in range(0, len(q[6]), 2): _obsl.setdefault(q[6][i], set()).add(routes[q[0]][1])
+stops = []
+for sid, (x, y) in SXY.items():
+    n_ = NI.get(SN.get(sid))
+    if n_ is None or n_ not in _obsl or not AREA.contains(shapely.Point(x, y)): continue
+    if any(q[0] == n_ and abs(q[1] - x) < 6 and abs(q[2] - y) < 6 for q in stops): continue   # stejné místo vícekrát (nástupiště, stanice)
+    stops.append([n_, round(x, 1), round(y, 1), 0 if 0 in _obsl[n_] else 3])
+print('zastávek na mapě', len(stops))
 # odstav na konečné: kolej za zastávkou končí slepě (do 160 m), tramvaj čeká vzadu na konci koleje, ne na nástupišti
 # {tvar: [[[x, y], …] od zastávky po konec koleje, …]}, nejvýš dvě koleje, ať se vozy můžou vystřídat
 import heapq as _hq, math as _m
@@ -145,6 +157,6 @@ for _sh in sorted({q[1] for q in out if routes[q[0]][1] == 0 and len(q) > 7 and 
         if len(_vyber) == 2: break
     if _vyber: odstav[str(_sh)] = [[[round(float(_a), 1), round(float(_b), 1)] for _a, _b in _o] for _o in _vyber]
 print('tvarů s odstavem na konečné', len(odstav))
-json.dump({'routes': routes, 'shapes': shapes, 'services': services, 'trips': out, 'names': names, 'odstav': odstav,
+json.dump({'routes': routes, 'shapes': shapes, 'services': services, 'trips': out, 'names': names, 'odstav': odstav, 'stops': stops,
            'feed': next(iter(T('feed_info')), {}).get('feed_version', '') if 'feed_info.txt' in zf.namelist() else time.strftime('%Y-%m-%d', time.localtime(os.path.getmtime(Z)))}, open('site/mhd.json', 'w', encoding='utf-8'), separators=(',', ':'), ensure_ascii=False)
 print('linek', len(routes), 'tras', len(shapes), 'spojů', len(out), 'kB', os.path.getsize('site/mhd.json') // 1000)
