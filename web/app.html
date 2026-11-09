@@ -1747,6 +1747,14 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     }
     return pts;
   })();
+  // svíčky na hrobech (overlay/<čtverec>.json "svicky": [x, y obrázku, náhoda]), kreslí se večer
+  const svicky = [], SVB = 512, svGrid = new Map();             // mřížka po 512 px obrázku: každý snímek jen buňky ve výřezu
+  onChunk.push((k, d) => {
+    for (const [x, y, u] of d.svicky || []) {
+      const q = [x, y, u, k], key = Math.floor(x / SVB) + ',' + Math.floor(y / SVB);
+      svicky.push(q); if (!svGrid.has(key)) svGrid.set(key, []); svGrid.get(key).push(q);
+    }
+  });
   // vodní třpytky: body na potocích a uvnitř rybníků
   const sparkles = [];
   onChunk.push((wk, d) => {
@@ -2345,6 +2353,24 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
         ctx.fillStyle = ['#ff4a3a', '#ffd23a', '#4ab0ff', '#ffffff'][ph];
         ctx.globalAlpha = on; ctx.fillRect(X0 + Math.round(lx * k), Y0 + Math.round(ly * k), k, k); ctx.globalAlpha = 1;
       });
+    }
+    // svíčky na hřbitovech: večer; kolem Dušiček (30. 10.–10. 11.) skoro na každém hrobě, na Štědrý den na většině, jinak jen tu a tam.
+    // Hřbitovní lampy jsou červené, žluté a bílé; plamen se mihotá, při přiblížení kolem něj malá záře
+    if (night > 0.3 && sx > 0.1 && svicky.length) {
+      const dn = new Date(), md = (dn.getMonth() + 1) * 100 + dn.getDate();
+      const podil = md >= 1030 && md <= 1110 ? 0.85 : md >= 1224 && md <= 1226 ? 0.6 : 0.1, on = Math.min(1, (night - 0.3) * 2.5);
+      const q = Math.max(1, Math.round(sx * 0.8)), zare = sx > 0.45 && !SLOW;
+      const lod = sx < 0.3 ? 3 : sx < 0.5 ? 2 : 1;               // zdálky stačí každá druhá až třetí (hustota vypadá stejně)
+      const gx0 = Math.floor(-ox / sx / SVB), gy0 = Math.floor(-oy / sx / SVB), gx1 = Math.floor((cw - ox) / sx / SVB), gy1 = Math.floor((ch - oy) / sx / SVB);
+      for (let gx = gx0; gx <= gx1; gx++) for (let gy = gy0; gy <= gy1; gy++) for (const [cx, cy, u, ck] of svGrid.get(gx + ',' + gy) || []) {
+        if (u > podil || (lod > 1 && Math.floor(u * 997) % lod) || !shown(ck)) continue;
+        const fl = 0.72 + 0.28 * Math.sin(t * (6 + u * 9) + u * 50) * Math.sin(t * 2.7 + u * 31);
+        ctx.fillStyle = u < podil * 0.5 ? '#ff4b2e' : u < podil * 0.8 ? '#ffc04a' : '#fff0c8';
+        const X = Math.round(ox + cx * sx), Y = Math.round(oy + cy * sx);
+        if (zare) { ctx.globalAlpha = 0.22 * fl * on; ctx.fillRect(X - q * 2, Y - q * 2, q * 4, q * 4); }
+        ctx.globalAlpha = fl * on; ctx.fillRect(X - (q >> 1), Y - (q >> 1), q, q);
+      }
+      ctx.globalAlpha = 1;
     }
     // kouř z komínů
     if ($('l-smoke').checked && sx > 0.3) {
