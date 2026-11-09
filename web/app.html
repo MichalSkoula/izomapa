@@ -2074,7 +2074,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     perf(now - last);
     if (eco && (skip = !skip)) { requestAnimationFrame(frame); return; }      // úsporně: každý druhý snímek
     const dt = Math.min(0.1, (now - last) / 1000); last = now;
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = SLOW ? Math.min(1.5, window.devicePixelRatio || 1) : (window.devicePixelRatio || 1);   // mobil: efekty v 1,5× místo 3×, 4× méně pixelů (pixel art, plátno se zvětší bez rozmazání)
     const cw = fx.clientWidth, ch = fx.clientHeight;
     if (fx.width !== Math.round(cw * dpr) || fx.height !== Math.round(ch * dpr)) { fx.width = Math.round(cw * dpr); fx.height = Math.round(ch * dpr); }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, cw, ch); ctx.imageSmoothingEnabled = false;
