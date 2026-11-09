@@ -68,6 +68,7 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
 - **Železniční přejezdy (volitelné):** `.venv/bin/python nastroje/prejezdy.py` vyrobí `assets/prejezdy.json` z OSM (`railway=level_crossing`), `prep.py` je přiřadí silnicím, které tam kříží kolej. Přejezd se zavře asi 25 s před příjezdem vlaku podle jízdních řádů a otevře, až projede poslední vůz; auta před ním čekají ve frontě. Bez souboru nebo bez vlaků v MHD auta nečekají. Render není potřeba, stačí `prep.py`, `overlay.py` a `build_html.py`.
 - **Les a pole:** maska lesa z ortofota (`nastroje/les.py`), pole ze ZABAGED (`nastroje/zabaged.py`, `nastroje/pole.py`).
   Když les nesedí, uprav prahy barev v `nastroje/les.py` a ověř na `build/orto_cele.jpg`.
+- **Stáda zvířat (krávy, koně, srnky):** `assets/upresneni.json`, `"stada": [{"typ": "kravy"|"kone"|"srnky", "lat": ..., "lon": ..., "pocet": 10, "radius": 35}]`. Stádo se chová podle ročního období a denní doby (v zimě/sněhu a v noci/tmě se semkne do těsného hloučku, na podzim/v dešti drží skupinky, v létě a na jaře se pase po celé ploše pastviny; na jaře se u matek objevují novorozená mláďata – telata, hříbata, srnčata).
 
 Rychlá kontrola jednoho místa bez celého čtverce:
 `python prep.py data_c0_-1 0,-1` a `node render.mjs mpp=0.2 dir=build/c0_-1 out=build/test season=summer alpha=1 "tiles=7_3;7_4"`.
