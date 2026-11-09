@@ -91,6 +91,14 @@ def nid(n):
     if n not in NI: NI[n] = len(names); names.append(n)
     return NI[n]
 out = []
+# vlaky z celostátního jízdního řádu (nastroje/vlaky_vyber.py a nastroje/vlaky.py), hodí se, když GTFS vlaky nemá; druh vozidla určuje volba "vlak"
+if MESTO.get('vlak') and os.path.exists('build/vlaky/vlaky_mhd.json'):
+    _v = json.load(open('build/vlaky/vlaky_mhd.json', encoding='utf-8'))
+    _r, _s = len(routes), len(shapes)
+    routes += _v['routes']; shapes += _v['shapes']; services.update(_v['services'])
+    for t in _v['trips']:
+        z_ = t[6]; out.append([t[0] + _r, t[1] + _s, t[2], t[3], t[4], nid(t[5]), [q for i in range(0, len(z_), 2) for q in (nid(z_[i]), z_[i + 1])]])
+    print('vlaků z celostátního jízdního řádu', len(_v['trips']))
 for t in trips:
     if routes[RI[t['route_id']]][1] != 2 and len(routes[RI[t['route_id']]][0]) > 4: continue   # poptávková doprava apod. bez pravidelné trasy; vlaky mají dlouhá čísla
     s = st.get(t['trip_id'], [])
