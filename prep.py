@@ -624,6 +624,18 @@ for l, w, c, n in drive_lines:
         cd.line(P([(q.x, q.y), (q.x + rx * (w / 2 - 0.3), q.y + ry * (w / 2 - 0.3))]), fill=C['marking'], width=max(1, round(0.45 / TEX_RES)))
 all_lines = [(l, w, c, n) for _, g, c, w, n in roads if c != 'rail' for l in lines(g)]
 
+def deck_runs(pts):
+    """mostovka jen nad terénem mapy: nájezd, který pokračuje cestou za okraj mapy, by visel do prázdna (hráz u okraje) -> souvislé kusy uvnitř EXT"""
+    out, cur = [], []
+    for q in pts:
+        if EXT_P.contains(Point(q[0], q[1])): cur.append(q)
+        else:
+            if len(cur) > 1: out.append(cur)
+            cur = []
+    if len(cur) > 1: out.append(cur)
+    return out
+
+
 def deck_line(D):
     lz, d, z = D[0], D[1], D[2]
     return [[round(x, 1), round(y, 1), round(float(h), 2)] for (x, y), h in zip(np.array(lz.coords)[:, :2], z)]
@@ -1762,7 +1774,8 @@ json.dump({'chunk': CHUNK, 'center': [CX, CY], 'half': HALF, 'step': STEP, 'n': 
            'floor': geo.FLOOR, 'top': round(TOP, 1),
            'buildings': buildings, 'trees': trees, 'props': props, 'cars': cars, 'buses': buses, 'portals': portals, 'lines': lines_out,
            'herds': herds_out,
-           'bridges': [{'p': [[*q, round(float(g_), 2)] for q, g_ in zip(deck_line(D), D[3])], 'w': D[4], 'k': D[5], 'c': D[6], 'wtr': D[8] if len(D) > 8 else 0} for D in DECKS if D[0].intersects(EXT)]},
+           'bridges': [{'p': run, 'w': D[4], 'k': D[5], 'c': D[6], 'wtr': D[8] if len(D) > 8 else 0} for D in DECKS if D[0].intersects(EXT)
+                       for run in deck_runs([[*q, round(float(g_), 2)] for q, g_ in zip(deck_line(D), D[3])])]},
           open(f'{OUT}/scene.json', 'w'), separators=(',', ':'))
 
 # podklady pro interaktivní vrstvu prohlížeče
