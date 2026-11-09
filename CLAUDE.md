@@ -28,6 +28,9 @@ jiné město. Komunikuj česky, věcně, a před dlouhými kroky řekni, kolik b
    souřadnice. Ty z toho vezmi střed pastviny, ověř ho na ortofotu a zapiš stádo do `assets/upresneni.json` (`stada`,
    viz Stáda zvířat níže), zeptej se i na druh a přibližný počet. Zvířata jsou v dlaždicích, takže je zapiš před stavbou
    (později je potřeba nový render dotčeného čtverce).
+   **Potoky:** zeptej se: „Chceš na mapě kreslit i potoky?“ Řeky se kreslí vždy, potoky jen s `"potoky": true`
+   v `mesto.json`. Hodí se hlavně pro menší obce, kde je potok dominantou. Ve velkém městě často vedou pod zemí a mohly
+   by se kreslit přes silnice a parkoviště (schovají se jen pod budovami); na velkém městě to zatím není vyzkoušené.
    **Letadla:** zeptej se: „Chceš na mapě skutečná letadla nad městem?“ Výchozí je vypnuto, zapíná je `"letadla": true`
    v `mesto.json`. Řekni mu, že fungují jen na Cloudflare (prostředník `functions/api/flights.js`, ptá se za všechny
    návštěvníky jednou za 15 s) a že nad malým městem letadlo proletí jen občas.
@@ -77,6 +80,7 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
 - **Letadla (volitelné, výchozí vypnuto):** `"letadla": true` v `mesto.json` zobrazí v prohlížeči letadla v úrovni mraků (menší sportovní letadla) a nad nimi (dopravní proudová letadla). Polohy stahuje každých 20 s z `api/flights` v okruhu města, s plynulou interpolací pohybu. Prohlížeč se na adsb.lol ani OpenSky přímo nedostane (CORS), proto data z adsb.lol (ODbL, bez klíče) podává prostředník `functions/api/flights.js` s 15s cache pro všechny návštěvníky. Na Cloudflare Pages se nasadí sám, když se `wrangler pages deploy site` spouští z kořene repa; s workerem z `hlaseni/` ho obslouží worker. U proudových letadel kreslí kondenzační čáry unášené větrem, vrhá stín na terén a v noci bliká pozičními a výstražnými světly. Kliknutím na letadlo se zapne jeho plynulé sledování kamerou. Bez prostředníka (jiný statický hosting) se letadla nekreslí a prohlížeč se po první odpovědi 404 přestane ptát. Vymyšlená letadla mapa neukazuje.
 - **Les a pole:** maska lesa z ortofota (`nastroje/les.py`), pole ze ZABAGED (`nastroje/zabaged.py`, `nastroje/pole.py`).
   Když les nesedí, uprav prahy barev v `nastroje/les.py` a ověř na `build/orto_cele.jpg`.
+- **Potoky, ruční mosty a drobné stavby:** potoky jen s `"potoky": true` v `mesto.json` (schovají se pod budovami). V `assets/upresneni.json`: `"bridges": [{"line": [[lat, lon], …], "w": 2.5, "h": 1.2}]` (lávka), `"bridge_min"` (nejkratší most, výchozí 8 m), `"custom_bld": [{"id", "poly": [[lat, lon], …], "h"}]` (drobná stavba), `"cemetery"` (rozteče hrobů a kolik stromů zůstane). Po změně je potřeba `prep.py` a nový render.
 - **Stáda zvířat (krávy, koně, srnky):** `assets/upresneni.json`, `"stada": [{"typ": "kravy"|"kone"|"srnky", "lat": ..., "lon": ..., "pocet": 10, "radius": 35}]`. Stádo se chová podle ročního období a denní doby (v zimě/sněhu a v noci/tmě se semkne do těsného hloučku, na podzim/v dešti drží skupinky, v létě a na jaře se pase po celé ploše pastviny; na jaře se u matek objevují novorozená mláďata – telata, hříbata, srnčata).
 
 Rychlá kontrola jednoho místa bez celého čtverce:
