@@ -656,11 +656,46 @@ for _, r in inf.iterrows():
         cd.polygon(P(corners), fill=C['marking'])
         k += 1.0
 
-# parkovací stání + zaparkovaná auta
+# parkovací stání + zaparkovaná auta: kolmo k uličkám, z obou stran (plocha bez uliček v datech podle obdélníku)
 cars = []
+_aisles = [l for _, g, c, _w, _n in roads if c == 'service' for l in lines(g)]
+_aisle_tree = shapely.STRtree(_aisles) if _aisles else None
+_stani = {}                                     # středy stání v mřížce 3 m: sousední uličky a plochy se nepřekryjí
+def _stani_volne(x, y):
+    kx, ky = int(x // 3), int(y // 3)
+    for a_ in range(kx - 1, kx + 2):
+        for b_ in range(ky - 1, ky + 2):
+            for q_ in _stani.get((a_, b_), []):
+                if (q_[0] - x) ** 2 + (q_[1] - y) ** 2 < 4.0: return False
+    _stani.setdefault((kx, ky), []).append((x, y))
+    return True
 for pid, p in parkings:
     if p.area < 120: continue
     crng = random.Random(f'{pid}{wkey(p.centroid.x, p.centroid.y)}')
+    _ais = []
+    if _aisle_tree is not None:
+        _p05 = p.buffer(0.5)
+        for i_ in sorted(int(v) for v in _aisle_tree.query(p)):
+            _ais += [l_ for l_ in lines(_aisles[i_].intersection(_p05)) if l_.length >= 6]
+    if _ais:
+        _pp = shapely.prepared.prep(p.buffer(-0.3))
+        _ais_tree = shapely.STRtree(_ais)
+        for a_l in _ais:
+            _s = 1.25
+            while _s < a_l.length - 1.25:
+                _q0, _q1, _q = a_l.interpolate(_s - 1.0), a_l.interpolate(_s + 1.0), a_l.interpolate(_s)
+                _tl = math.hypot(_q1.x - _q0.x, _q1.y - _q0.y) or 1.0
+                _tx, _ty = (_q1.x - _q0.x) / _tl, (_q1.y - _q0.y) / _tl
+                for _sg in (1, -1):
+                    _nx, _ny = -_ty * _sg, _tx * _sg
+                    _pa, _pb, _pc = [Point(_q.x + _nx * d_, _q.y + _ny * d_) for d_ in (3.0, 8.0, 5.5)]
+                    if not (_pp.contains(_pa) and _pp.contains(_pb) and _pp.contains(_pc)): continue
+                    if len(_ais_tree.query(_pc, predicate='dwithin', distance=4.6)) or not _stani_volne(_pc.x, _pc.y): continue   # blíž k jiné uličce než ke své
+                    cd.line(P([(_pa.x - _tx * 1.25, _pa.y - _ty * 1.25), (_pb.x - _tx * 1.25, _pb.y - _ty * 1.25)]), fill=C['marking'], width=1)
+                    cd.line(P([(_pa.x + _tx * 1.25, _pa.y + _ty * 1.25), (_pb.x + _tx * 1.25, _pb.y + _ty * 1.25)]), fill=C['marking'], width=1)
+                    if crng.random() < 0.58: cars.append([_pc.x, _pc.y, math.atan2(_ny, _nx), crng.randrange(8)])
+                _s += 2.5
+        continue
     o = p.minimum_rotated_rectangle
     oc = [np.array(c) for c in list(o.exterior.coords)[:4]]
     e1, e2 = oc[1] - oc[0], oc[3] - oc[0]
