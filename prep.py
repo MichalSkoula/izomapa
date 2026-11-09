@@ -359,9 +359,13 @@ seg = load('segment')
 _uc = lambda r: r['class'] == 'motorway' and any('is_under_construction' in list(f.get('values')) for f in (r.road_flags if r.road_flags is not None else []))
 seg = seg[[not _uc(r) for _, r in seg.iterrows()]].reset_index(drop=True)
 TUNNEL_MIN = 60.0     # kratší „tunel“ je podjezd pod silnicí nebo tratí: kreslí se jako cesta, nad ní vede most
+def seg_flags(r):
+    """příznaky úseku: silnice je mají v road_flags, tratě v rail_flags"""
+    v = r.get('rail_flags') if r.subtype == 'rail' else r.road_flags
+    return list(v) if isinstance(v, (list, np.ndarray)) else []
 def tunnel_parts(r):
     """části segmentu mimo tunel (0..1); dlouhé tunely se nekreslí, silnice je pod zemí"""
-    fl = r.road_flags if r.road_flags is not None else []
+    fl = seg_flags(r)
     tn = [f.get('between') for f in fl if 'is_tunnel' in list(f.get('values'))]
     tn = [t for t in tn if (1.0 if t is None else float(t[1]) - float(t[0])) * r.geom.length >= TUNNEL_MIN]
     if not tn: return None
@@ -388,7 +392,7 @@ seg = pd.DataFrame(_rows).reset_index(drop=True)
 # mosty a lávky: úsek označený is_bridge se nekreslí do terénu, ale postaví se jako mostovka (scene.bridges)
 BRIDGE_MIN = UP.get('bridge_min', 8.0)      # kratší „most“ (propustek nad potokem) zůstane obyčejnou cestou
 def bridge_parts(r):
-    fl = r.road_flags if isinstance(r.road_flags, (list, np.ndarray)) else []
+    fl = seg_flags(r)
     br = [f.get('between') for f in fl if 'is_bridge' in list(f.get('values'))]
     if not br: return None
     rng = sorted((0.0, 1.0) if t is None else (float(t[0]), float(t[1])) for t in br)
