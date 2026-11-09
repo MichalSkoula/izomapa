@@ -23,6 +23,14 @@ jiné město. Komunikuj česky, věcně, a před dlouhými kroky řekni, kolik b
    Prohlížeč kreslí tramvaj jako tmavě červenou T3 a autobus bílý (`drawVehicle` ve `web/app.html`). Když má město
    trolejbusy, nebo jiné barvy vozidel, nabídni, že dokreslíš vlastní model (trolejbus se sběrači, tramvaj nebo autobus
    v barvách místního dopravce). Podklad jsou uživatelovy fotky nebo volně licencované fotky z Wikimedia Commons.
+   **Zvířata:** zeptej se: „Jsou ve městě nebo kolem něj pastviny se zvířaty (krávy, koně, obora se srnkami)? Když ano,
+   kde přesně?“ Uživatel může popsat místo (název louky, statku, ulice), poslat odkaz z Mapy.cz nebo Google Maps, nebo
+   souřadnice. Ty z toho vezmi střed pastviny, ověř ho na ortofotu a zapiš stádo do `assets/upresneni.json` (`stada`,
+   viz Stáda zvířat níže), zeptej se i na druh a přibližný počet. Zvířata jsou v dlaždicích, takže je zapiš před stavbou
+   (později je potřeba nový render dotčeného čtverce).
+   **Letadla:** zeptej se: „Chceš na mapě skutečná letadla nad městem?“ Výchozí je vypnuto, zapíná je `"letadla": true`
+   v `mesto.json`. Řekni mu, že fungují jen na Cloudflare (prostředník `functions/api/flights.js`, ptá se za všechny
+   návštěvníky jednou za 15 s) a že nad malým městem letadlo proletí jen občas.
 4. **Stavba:** `./postav.sh` (spouštěj na pozadí, běží dlouho). Kroky, které už mají výsledek, přeskakuje.
 5. **Kontrola:** `python compose.py summer 8` udělá `build/nahled_summer.png`. Prohlédni si ho (švy mezi čtverci,
    prázdná místa, divné barvy) a pošli uživateli. Pak `npm run nahled` a mapa běží na http://localhost:8000.
@@ -66,6 +74,7 @@ Automaticky z dat vyjde celé město. Ručně je potřeba:
 - **Typy budov (jen Česko):** `.venv/bin/python nastroje/ruian.py` vyrobí `assets/ruian_budovy.json` (způsob využití a podlaží z veřejné služby RÚIAN). `prep.py` jím doplní jen prázdný nebo obecný typ a podlaží tam, kde není laser. Třída `apartments` znamená plochou střechu, proto ji dostane jen budova, u které plochou střechu potvrdí laser. Po změně je potřeba nový render.
 - **Komíny, věže, nádrže, potrubí:** `.venv/bin/python nastroje/kominy.py` vyrobí `assets/kominy.json` a `assets/potrubi.json` z OSM (výška z tagu `height`). Komín od 100 m dostane výstražné pruhy. Vzhled jednoho komína: `assets/upresneni.json`, `"kominy": [{"lat", "lon", "wc": barva, "pr": 0}]`. Po změně je potřeba nový render dotčených čtverců.
 - **Železniční přejezdy (volitelné):** `.venv/bin/python nastroje/prejezdy.py` vyrobí `assets/prejezdy.json` z OSM (`railway=level_crossing`), `prep.py` je přiřadí silnicím, které tam kříží kolej. Přejezd se zavře asi 25 s před příjezdem vlaku podle jízdních řádů a otevře, až projede poslední vůz; auta před ním čekají ve frontě. Bez souboru nebo bez vlaků v MHD auta nečekají. Render není potřeba, stačí `prep.py`, `overlay.py` a `build_html.py`.
+- **Letadla (volitelné, výchozí vypnuto):** `"letadla": true` v `mesto.json` zobrazí v prohlížeči letadla v úrovni mraků (menší sportovní letadla) a nad nimi (dopravní proudová letadla). Polohy stahuje každých 20 s z `api/flights` v okruhu města, s plynulou interpolací pohybu. Prohlížeč se na adsb.lol ani OpenSky přímo nedostane (CORS), proto data z adsb.lol (ODbL, bez klíče) podává prostředník `functions/api/flights.js` s 15s cache pro všechny návštěvníky. Na Cloudflare Pages se nasadí sám, když se `wrangler pages deploy site` spouští z kořene repa; s workerem z `hlaseni/` ho obslouží worker. U proudových letadel kreslí kondenzační čáry unášené větrem, vrhá stín na terén a v noci bliká pozičními a výstražnými světly. Kliknutím na letadlo se zapne jeho plynulé sledování kamerou. Bez prostředníka (jiný statický hosting) se letadla nekreslí a prohlížeč se po první odpovědi 404 přestane ptát. Vymyšlená letadla mapa neukazuje.
 - **Les a pole:** maska lesa z ortofota (`nastroje/les.py`), pole ze ZABAGED (`nastroje/zabaged.py`, `nastroje/pole.py`).
   Když les nesedí, uprav prahy barev v `nastroje/les.py` a ověř na `build/orto_cele.jpg`.
 - **Stáda zvířat (krávy, koně, srnky):** `assets/upresneni.json`, `"stada": [{"typ": "kravy"|"kone"|"srnky", "lat": ..., "lon": ..., "pocet": 10, "radius": 35}]`. Stádo se chová podle ročního období a denní doby (v zimě/sněhu a v noci/tmě se semkne do těsného hloučku, na podzim/v dešti drží skupinky, v létě a na jaře se pase po celé ploše pastviny; na jaře se u matek objevují novorozená mláďata – telata, hříbata, srnčata).
