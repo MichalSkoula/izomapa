@@ -36,3 +36,17 @@ assets/ruian_budovy.json
 assets/kominy.json
 assets/prejezdy.json
 assets/potrubi.json
+
+# soukromé podklady a tajemství (nikdy do veřejného repa)
+podklady-soukrome/
+Fotky k nahrání/
+Satelitni snimky/
+output/
+.env*
+.dev.vars
+*.sql
+*.sqlite
+.vercel/
+hlaseni/wrangler.jsonc
+wrangler.toml
+!hlaseni/migrations/*.sql
