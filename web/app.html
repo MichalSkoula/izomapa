@@ -472,6 +472,26 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
       if (l.day) viewer.world.setItemIndex(l.day, k++);
     }
   };
+  const S_REV = { spring: 'jaro', summer: 'leto', autumn: 'podzim', winter: 'zima' };
+  const neighborHref = (n) => {
+    let u = n.url || '';
+    if (u.includes('@')) return u;
+    const lat = n.target_lat ?? (n.cil ? n.cil[0] : n.lat);
+    const lon = n.target_lon ?? (n.cil ? n.cil[1] : n.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return u;
+    let km = 1.4;
+    try {
+      if (viewer && viewer.viewport && cam) {
+        const w = viewer.viewport.getBounds(true).width * W * cam.mpp / 1000;
+        if (w > 0 && Number.isFinite(w)) km = Math.min(Math.max(Number(w.toFixed(2)), 0.05), 10);
+      }
+    } catch {}
+    const sTok = S_REV[state.season] || 'leto';
+    const nTok = state.night > 0.65 ? '-noc' : state.night > 0.25 ? '-soumrak' : '';
+    const hash = `#${sTok}${nTok}@${Number(lat).toFixed(5)},${Number(lon).toFixed(5)},${km},1`;
+    return u.split('#')[0] + hash;
+  };
+
   async function initLayers() {
     await addPreview(state.season);
     $('loading').hidden = true;
@@ -506,13 +526,15 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
     }
     for (const n of OV.neighbors || []) {
       if (OBEC && n.obec && n.obec !== OBEC) continue;
-      const el = document.createElement('a'); el.className = 'pin neighbor'; el.href = n.url;
+      const el = document.createElement('a'); el.className = 'pin neighbor'; el.href = neighborHref(n);
       if (n.target) el.target = n.target;
       if (el.target === '_blank') el.rel = 'noopener';
       el.title = n.text || `Přejít na mapu: ${n.name}`;
       el.innerHTML = `<span class="pin-ico">↗</span> ${n.name}`;
-      el.addEventListener('pointerdown', (e) => e.stopPropagation());
-      el.addEventListener('click', (e) => e.stopPropagation());
+      const upd = () => { el.href = neighborHref(n); };
+      el.addEventListener('pointerenter', upd);
+      el.addEventListener('pointerdown', (e) => { e.stopPropagation(); upd(); });
+      el.addEventListener('click', (e) => { e.stopPropagation(); upd(); });
       n.el = el;
       viewer.addOverlay({ element: el, location: new OpenSeadragon.Point(n.xy[0] / W, n.xy[1] / W), placement: OpenSeadragon.Placement.CENTER, checkResize: false });
     }
@@ -859,7 +881,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
       if (d < nd) { nb = n; nd = d; }
     }
     if (nb) {
-      showCard({ title: nb.name, text: nb.text || 'Sousední izometrická mapa.', lon: nb.lon, lat: nb.lat, k: nb.k, link: nb.url, linkText: `Přejít na mapu ${nb.name} ↗`, target: nb.target, rows: [['Sousední mapa', nb.name]] });
+      showCard({ title: nb.name, text: nb.text || 'Sousední izometrická mapa.', lon: nb.lon, lat: nb.lat, k: nb.k, link: neighborHref(nb), linkText: `Přejít na mapu ${nb.name} ↗`, target: nb.target, rows: [['Sousední mapa', nb.name]] });
       return;
     }
     // místo bez budovy (náměstí, hřbitov, přehrada): klik do 40 m od jeho špendlíku (1 px = 0,2 m)
@@ -931,7 +953,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   const index = [];
   for (const n of OV.neighbors || []) {
     if (OBEC && n.obec && n.obec !== OBEC) continue;
-    index.push({ label: n.name, kind: 'soused', k: n.k, n: norm(n.name), go: () => { goTo(n.xy[0], n.xy[1], 1.4); showCard({ title: n.name, text: n.text || 'Sousední izometrická mapa.', lon: n.lon, lat: n.lat, k: n.k, link: n.url, linkText: `Přejít na mapu ${n.name} ↗`, target: n.target, rows: [['Sousední mapa', n.name]] }); } });
+    index.push({ label: n.name, kind: 'soused', k: n.k, n: norm(n.name), go: () => { goTo(n.xy[0], n.xy[1], 1.4); showCard({ title: n.name, text: n.text || 'Sousední izometrická mapa.', lon: n.lon, lat: n.lat, k: n.k, link: neighborHref(n), linkText: `Přejít na mapu ${n.name} ↗`, target: n.target, rows: [['Sousední mapa', n.name]] }); } });
   }
   for (const p of OV.places) index.push({ label: p.name, kind: 'místo', k: p.k, n: norm(p.name), go: () => { goTo(p.xy[0], p.xy[1], 1.4); showCard({ title: p.name, text: p.text, lon: p.lon, lat: p.lat, k: p.k, rows: [] }); } });
   for (const s of OV.streets) index.push({ label: s.name, kind: 'ulice', k: s.k, n: norm(s.name), go: () => goTo(s.xy[0], s.xy[1], 0.9) });

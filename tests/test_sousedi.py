@@ -53,6 +53,8 @@ class TestSousedi(unittest.TestCase):
         self.assertIn("kind: 'soused'", html)
         self.assertIn("p.el.hidden = !shown(p.k)", html)
         self.assertIn("n.el.hidden = !shown(n.k)", html)
+        self.assertIn("neighborHref", html)
+        self.assertIn(",1`", html)
 
     def test_build_html_with_neighbors(self):
         with tempfile.TemporaryDirectory() as td:

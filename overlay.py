@@ -297,6 +297,10 @@ for s in SOUS_RAW:
     item = {'name': name, 'url': url, 'lat': lat, 'lon': lon, 'k': k, 'xy': [ix, iy], 'target': target}
     if text: item['text'] = text
     if obec: item['obec'] = obec
+    if 'target_lat' in s and 'target_lon' in s:
+        item['target_lat'] = float(s['target_lat']); item['target_lon'] = float(s['target_lon'])
+    elif 'cil' in s and len(s['cil']) >= 2:
+        item['target_lat'] = float(s['cil'][0]); item['target_lon'] = float(s['cil'][1])
     neighbors.append(item)
 
 cam = {'x0': info['x0'], 'y1': info['y1'], 'mpp': info['mpp'], 'X': list(map(float, CAM_X)), 'Y': list(map(float, CAM_Y)),
