@@ -203,6 +203,9 @@ převádím sem, aby je měl každý zdarma. Rád to dávám dál a jediné, o c
   Je nenápadný a vaší mapě nijak nepřekáží.
 - **Když mapu sdílíte na sociálních sítích,** označte prosím izomapu: Instagram
   [@izomapa.fun](https://www.instagram.com/izomapa.fun/), Facebook [izomapa](https://www.facebook.com/izomapa).
+- **Když u sebe něco vylepšíte** (rychlost, render, nová funkce, oprava), pošlete to prosím zpátky jako
+  [pull request](https://github.com/adamklatovsky/izomapa/pulls). Já sem dávám svoje vylepšení z Liberce, je fér,
+  když se to vrátí a pomůže i ostatním. Stačí obecná část, bez dat a úprav vašeho města.
 - Nevydávejte prosím izomapu za vlastní výtvor. Mapa vašeho města je vaše práce, nástroj pod ní je moje.
 
 Nic z toho není podmínka, je to prosba. Kdo ji dodrží, dělá mi radost a dává smysl tomu, že to dál dávám zdarma.
