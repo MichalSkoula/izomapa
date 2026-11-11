@@ -25,5 +25,13 @@
       "pocet": 5,
       "radius": 25
     }
+  ],
+  "sousedi": [
+    {
+      "nazev": "Liberec",
+      "url": "https://izomapa.fun",
+      "lat": 50.81000,
+      "lon": 15.03000
+    }
   ]
 }
