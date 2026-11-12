@@ -1240,7 +1240,7 @@ for _, r in bld.iterrows():
         if dsp:
             b['dn'] = dom['name']
             if dsp.get('canopy'): b['cn'] = dsp['canopy']
-            for blk in dsp.get('blocks', []):
+            for blk in (dsp.get('blocks', []) if pi == tw_piece else []):
                 o = p.minimum_rotated_rectangle; cs = list(o.exterior.coords)[:3]
                 e1 = np.subtract(cs[1], cs[0]); e2 = np.subtract(cs[2], cs[1])
                 if np.linalg.norm(e1) < np.linalg.norm(e2): e1, e2 = e2, e1
