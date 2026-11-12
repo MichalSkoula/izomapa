@@ -705,7 +705,7 @@ dialog.help ol.vd-list { margin: 0; padding-left: 22px; } ol.vd-list li { margin
   // výchozí stav: léto, den, skutečný čas vypnutý (zapne si ho každý sám, volba se pak pamatuje)
   try { if (localStorage.getItem('izo-realtime') === '1' && !hashTokens.includes('noc')) { $('realTime').checked = true; } } catch {}
   setInterval(tickReal, 60000);
-  $('mTime').addEventListener('click', () => { state.night = state.night < 0.25 ? 0.42 : state.night < 0.7 ? 1 : 0; $('night').value = Math.round(state.night * 100); applyTime(); });
+  $('mTime').addEventListener('click', () => { state.night = state.night < 0.25 ? 0.42 : state.night < 0.7 ? 1 : 0; $('realTime').checked = false; saveRT(false); $('night').value = Math.round(state.night * 100); applyTime(); });
 
   // ---------- souřadnice ----------
   const cam = OV.cam;
