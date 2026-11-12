@@ -1332,19 +1332,20 @@ for d in DOMS:
     if not EXT_P.contains(Point(x, y)): continue
     own = AREA.contains(Point(x, y)); g = float(ground(x, y))
     bid = len(buildings)
-    w0 = sp['towers'][0]['w'] / 2
+    tw0 = (sp.get('towers') or [{'w': 4, 'h': sp.get('h', 0)}])[0]   # bez věží (jen vlastní model 'lm'): půdorys 4 × 4 m, výška 'h'
+    w0 = tw0['w'] / 2
     ring = [[round(x - w0, 2), round(y - w0, 2)], [round(x + w0, 2), round(y - w0, 2)], [round(x + w0, 2), round(y + w0, 2)], [round(x - w0, 2), round(y + w0, 2)]]
     b = {'p': ring, 'b': round(g - 0.6, 2), 'g': round(g, 2), 'e': round(g, 2), 'r': 'flat', 'rh': 0.0, 'parts': [], 'wc': (150, 146, 136), 'rc': (150, 146, 136),
          's': 4, 'id': bid, 'lm': sp.get('lm', 'dom'), 'dn': d['name'], 'only': 1, 'tw': []}
-    for tw in sp['towers']:
+    for tw in sp.get('towers', []):
         b['tw'].append({'x': round(x, 2), 'y': round(y, 2), 'a': 0.0, 'w': tw['w'], 'h': round(g + tw['h'], 2), 'to': round(g + tw.get('to', tw['h']), 2),
                         'top': tw['top'], 'tc': tw.get('tc', [90, 96, 104]), 'wc': [150, 146, 136], 'clock': 0, 'round': tw.get('round', 0),
                         'stone': tw.get('stone', 0), 'ruin': tw.get('ruin', 0), 'b': round(g - 0.6, 2)})
     if not own: b['gh'] = 1
     buildings.append(b)
-    r_ = 14 + sp['towers'][0]['w']; nd.ellipse([*P([(x - r_, y + r_)])[0], *P([(x + r_, y - r_)])[0]], fill=255)   # bez stromů kolem
+    r_ = 14 + tw0['w']; nd.ellipse([*P([(x - r_, y + r_)])[0], *P([(x + r_, y - r_)])[0]], fill=255)   # bez stromů kolem
     if own:
-        th_ = sp['towers'][0].get('to', sp['towers'][0]['h'])
+        th_ = tw0.get('to', tw0['h'])
         binfo.append({'id': bid, 'oid': d['name'], 'name': d['name'], 'cls': sp.get('cls', 'dominanta'),
                       'floors': None, 'h': round(float(th_), 1), 'roof': 'cone', 'addr': [], 'lon': round(float(d['lon']), 6), 'lat': round(float(d['lat']), 6),
                       'ring': ring, 'top': round(g + th_, 2), 'base': round(g - 0.6, 2)})
