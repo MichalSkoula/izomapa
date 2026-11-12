@@ -847,7 +847,7 @@ addr = load('address')
 addr = addr[addr.geom.map(lambda g: EXT_P.contains(g))]
 addr_pts = list(addr.geom)
 addr_tree = shapely.STRtree(addr_pts)
-addr_txt = [f"{s} {n}" if isinstance(s, str) else str(n) for s, n in zip(addr.street, addr.number)]
+addr_txt = [f"{s} {n}" if isinstance(s, str) else f"{c} {n}" if isinstance(c, str) else str(n) for s, n, c in zip(addr.street, addr.number, addr.postal_city)]
 
 buildings, binfo, chimneys = [], [], []
 bmask = Image.new('L', (TWE, TWE), 0); bmd = ImageDraw.Draw(bmask)
