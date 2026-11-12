@@ -1456,6 +1456,7 @@ for b in buildings:
     if pg.area < 50 or h01('bin' + wkey(c0.x, c0.y)) > 0.55: continue
     brng = wrng(c0.x, c0.y, 'bin')
     i = res_tree.nearest(c0)
+    if i is None: break                                # čtverec bez obytných ulic (les, pole)
     l, w = res_lines[i]
     if l.distance(c0) > 28: continue
     q = l.interpolate(l.project(c0))
