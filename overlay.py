@@ -7,10 +7,13 @@ import heapq, json, math
 import numpy as np
 from shapely.geometry import MultiPoint
 import os
-from geo import CAM_X, CAM_Y, CHUNKS, HALF, KX, KY, LAT0, LON0, MESTO, Image2D, chunk_center, chunk_dir, to_local
+from geo import CAM_X, CAM_Y, CHUNKS, HALF, KX, KY, LAT0, LON0, MESTO, MPP_OVERLAY, Image2D, chunk_center, chunk_dir, to_local
 
 # souřadnice obrázku = pixely čtverce (0, 0); ostatní čtverce leží mimo (záporné / větší souřadnice)
 info = json.load(open('build/tiles_autumn/info.json'))
+if info['mpp'] != MPP_OVERLAY:          # detailní rozlišení: dlaždice jsou jemnější, obrysy a animace prohlížeče zůstávají v pixelech 0,2 m
+    k = info['mpp'] / MPP_OVERLAY
+    info = {**info, 'mpp': MPP_OVERLAY, 'width': round(info['width'] * k), 'height': round(info['height'] * k)}
 im = Image2D(info)
 W, H = info['width'], info['height']
 OFF = (0.0, 0.0)          # posun aktuálně zpracovávaného čtverce (lokální -> společné souřadnice)
@@ -65,6 +68,50 @@ for f in sorted(glob.glob('data*/land_use.parquet')):
 AREA_TREE = shapely.STRtree([a[2] for a in AREAS]) if AREAS else None
 PL_TREE = shapely.STRtree([shapely.geometry.Point(p[0], p[1]) for p in PLACES_DB]) if PLACES_DB else None
 
+# chodci (web/js/75-chodci.js): pěší cesty z Overture po čtvercích, společné souřadnice [x, y] po 0,1 m.
+# l = čáry, c = druh (p pěší zóna, f chodník, s schody, t cesta v parku/lese, k cyklostezka, c / d cyklotrasa po silnici / po cestě), a = pěší plochy a náměstí (polygony).
+# Chodníky podél ulic, které v datech nejsou, si prohlížeč dopočítá ze silnic (roads). Vypnout: "chodci": false v mesto.json.
+WALK_K = {'pedestrian': 'p', 'footway': 'f', 'steps': 's', 'path': 't', 'cycleway': 'k', 'living_street': 'p', 'bridleway': 't'}
+_WALK, _WALK_SRC = {}, None
+def _walk_src():
+    global _WALK_SRC
+    if _WALK_SRC is not None: return _WALK_SRC
+    tr = lambda g: shapely.ops.transform(lambda x, y, z=None: to_local(x, y), g)
+    lines, areas = [], []
+    if MESTO.get('chodci', True) is not False:
+        for f in sorted(glob.glob('data_all/segment.parquet') or glob.glob('data*/segment.parquet')):
+            t = pq.read_table(f, columns=['class', 'geometry', 'road_flags']).to_pydict()
+            for c, g, fl in zip(t['class'], t['geometry'], t['road_flags']):
+                k = WALK_K.get(c)
+                if not k or any('is_tunnel' in (q.get('values') or []) and not q.get('between') for q in fl or []): continue
+                lines.append((k, tr(shapely.from_wkb(g))))
+        if os.path.exists('assets/cyklotrasy.json'):         # značené cyklotrasy (nastroje/cyklotrasy_osm.py): c po silnici, d po cestě, jen pro cyklisty
+            for druh, pts in json.load(open('assets/cyklotrasy.json')):
+                if len(pts) > 1: lines.append((druh, shapely.geometry.LineString([to_local(lo, la) for la, lo in pts])))
+        for f in sorted(glob.glob('data_all/land_use.parquet') or glob.glob('data*/land_use.parquet')):
+            t = pq.read_table(f, columns=['class', 'geometry']).to_pydict()
+            areas += [tr(shapely.from_wkb(g)) for c, g in zip(t['class'], t['geometry']) if c in ('pedestrian', 'plaza')]
+    _WALK_SRC = (lines, areas)
+    return _WALK_SRC
+def walk_of(chunk):
+    if tuple(chunk) in _WALK: return _WALK[tuple(chunk)]
+    lines, areas = _walk_src()
+    cx, cy = chunk_center(chunk)
+    box = shapely.box(cx - HALF, cy - HALF, cx + HALF, cy + HALF)
+    L, C, A = [], [], []
+    for k, g in lines:
+        g = g.intersection(box)
+        for q in getattr(g, 'geoms', [g]):
+            if q.geom_type != 'LineString' or q.length < 4: continue
+            L.append([[round(x, 1), round(y, 1)] for x, y in q.simplify(0.4).coords]); C.append(k)
+    for g in areas:
+        g = g.intersection(box)
+        for q in getattr(g, 'geoms', [g]):
+            if q.geom_type != 'Polygon' or q.area < 150: continue
+            A.append([[round(x, 1), round(y, 1)] for x, y in q.simplify(1.0).exterior.coords[:-1]])
+    _WALK[tuple(chunk)] = {'walk': {'l': L, 'c': ''.join(C), 'a': A}} if L or A else {}
+    return _WALK[tuple(chunk)]
+
 ONE_BUILDING = set(MESTO.get('jedna_budova', []))      # dominanty se zónami střech: v prepu samostatné díly, na mapě jedna budova
 
 
@@ -100,7 +147,7 @@ for chunk in chunks:
     # budovy: obrys = konvexní obal půdorysu dole a nahoře
     for b in merge_parts(src['buildings']):
         ring = np.array(b['ring'])
-        top = b['top'] + (22 if b['cls'] == 'kostel' else 0.6)
+        top = b['top'] + (22 if b['cls'] == 'kostel' and not b.get('pam') else 0.6)   # věž kostela (vlastní model památky ji má ve vršku)
         pts = [px(x, y, z)[:2] for x, y in ring for z in (b['base'], top)]
         hull = MultiPoint(pts).convex_hull
         if hull.geom_type != 'Polygon': continue
@@ -194,7 +241,9 @@ for chunk in chunks:
     # stromy u silnic, kolejí a sjezdovek: auta, tramvaje a lyžaři se za jejich korunami schovají (svět, z terénu, výška, jehličnan)
     sc_ = json.load(open(f'{chunk_dir(chunk)}/scene.json'))
     T_ = [t for t in sc_['trees'] if (len(t) < 6 or t[5] != 2) and abs(t[0]) <= HALF and abs(t[1]) <= HALF]
-    ln_ = [shapely.LineString([(x, y) for x, y, _ in r['p']]) for r in src['roads'] if len(r['p']) > 1] + \
+    _wk = walk_of(chunk).get('walk', {})   # stromy i u pěších zón, ať se za ně chodci schovají (ne u lesních cest: data by nabobtnala)
+    ln_ = [shapely.LineString([(x - OFF[0], y - OFF[1]) for x, y in w_]) for w_, c_ in zip(_wk.get('l', []), _wk.get('c', '')) if c_ == 'p'] + \
+      [shapely.LineString([(x, y) for x, y, _ in r['p']]) for r in src['roads'] if len(r['p']) > 1] + \
           [shapely.LineString([(x, y) for x, y, _ in l]) for l in src.get('trams', []) + src.get('pistes', []) if len(l) > 1]
     vtrees = []
     if ln_ and T_:
@@ -223,7 +272,7 @@ for chunk in chunks:
                     ta, tb, _ = px(t[0], t[1], t[2] + h_ * 0.62); ra, rb, _ = px(t[0] + r_, t[1], t[2] + h_ * 0.62)
                     if (a_ - ta) ** 2 + (b_ - tb) ** 2 < (ra - ta) ** 2 + (rb - tb) ** 2: skryta = True; break
             if not skryta: svicky.append([round(a_), round(b_), round(u, 3)])
-    per_chunk[K] = {'buildings': buildings, 'chimneys': chimneys, 'roads': roads, 'water': water.pop(K), 'pistes': pistes, 'trees': vtrees, 'svicky': svicky}
+    per_chunk[K] = {'buildings': buildings, 'chimneys': chimneys, 'roads': roads, 'water': water.pop(K), 'pistes': pistes, 'trees': vtrees, 'svicky': svicky, **walk_of(chunk)}
 
 
 
@@ -407,8 +456,14 @@ for a_n, b_n, n_ in TRAM_LINES:
     trams.append({'w': [[round(x, 1), round(y, 1)] for x, y, z in pts], 'p': [list(px(x, y, z)) for x, y, z in pts], 'n': n_,
                   'stops': [list(px(TSTOP[n][0], TSTOP[n][1], 0)[:2]) + [n] for n in st]})
     print('tramvaj', a_n, '–', b_n, round(sum(math.hypot(x1 - x0, y1 - y0) for (x0, y0), (x1, y1) in zip(on, on[1:]))), 'm', len(st), 'zastávek')
+# semafory (nastroje/semafory.py): [x, y, křižovatka] ve společných souřadnicích; silnicím je přiřadí prohlížeč
+signals = [[round(float(x), 1), round(float(y), 1), j] for la, lo, j in json.load(open('assets/semafory.json')) for x, y in [to_local(lo, la)]] if os.path.exists('assets/semafory.json') else []
+import plugins as _plugins
+def _plugin_xy(a, b, is_world=False):
+    global OFF; OFF = (0.0, 0.0); x, y = (float(a), float(b)) if is_world else to_local(float(b), float(a)); return list(px(float(x), float(y), gz(x, y))[:2])
+_doplnky = _plugins.load_and_run_plugins(MESTO, {**cam, 'w': W, 'h': H}, _plugin_xy)
 json.dump({'w': W, 'h': H, 'cam': cam, 'districts': districts, 'needs': needs, 'xmas': nam, 'chunks': {CKEY[c]: CHUNKS[c] for c in chunks}, 'bus': bus_route, 'trams': trams, 'decks': decks,
-           'streets': streets, 'places': places, 'neighbors': neighbors},
+           'streets': streets, 'places': places, 'neighbors': neighbors, **({'signals': signals} if signals else {}), **({'doplnky': _doplnky} if _doplnky else {})},
           open('site/overlay.json', 'w'), separators=(',', ':'), ensure_ascii=False)
 json.dump(addr_index, open('site/search.json', 'w'), separators=(',', ':'), ensure_ascii=False)   # adresy pro hledání, načte se až při psaní
 print('čtverců', len(chunks), 'budov', sum(len(v['buildings']) for v in per_chunk.values()), 'adres', len(addr_index),
