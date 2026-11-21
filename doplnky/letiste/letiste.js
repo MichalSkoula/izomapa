@@ -4,6 +4,8 @@
 // v zimě (travnaté letiště se obvykle neodklízí) létá nejvýš jedno letadlo. Výška okruhu je kvůli čitelnosti mapy snížená
 // (výchozí ~110 m), délky okruhu a rychlosti odpovídají malým letadlům. Kreslí se jako vozidla mapy: kvádry stínované
 // sluncem od jihovýchodu, obrys 1 px, cache podle druhu a směru (48 směrů).
+// Kluzák ("kluzak", volitelně "vlek": index vlečného letadla ve flotile, jinak první motorové): odtlačí se na práh, vlečné
+// letadlo ho na laně (40 m) vytáhne do výšky okruhu, kde se vypne, pokrouží ve stoupavém proudu, přistane a odtlačí se zpět.
 (() => {
   const ID = 'letiste';
   const Izomapa = window.Izomapa;
@@ -14,7 +16,9 @@
     c172: { len: 8.2, span: 11.0, V: 33, D: 620, H: 1.0, col: [236, 238, 236], str: [196, 44, 40], high: 1 },
     ul:   { len: 6.4, span: 9.0, V: 27, D: 520, H: 0.86, col: [240, 240, 236], str: [36, 92, 176], high: 0 },
     an2:  { len: 12.7, span: 18.2, V: 40, D: 900, H: 1.36, col: [178, 184, 180], str: [214, 64, 40], high: 2 },
+    kluzak: { len: 7.0, span: 15.0, V: 24, D: 700, H: 1.0, col: [244, 244, 240], str: [204, 48, 40], high: 1, glider: 1 },
   };
+  const LANO = 40;                                               // délka vlečného lana (m)
   const CHUTE = ['#d8352a', '#2f6fd1', '#f2c230', '#2aa36b', '#e0629a', '#f07a24', '#7b4fc9'];
   const NDIR = 48;
   const SUNV = (() => { const v = [0.38, -0.68, 0.62], n = Math.hypot(...v); return v.map((q) => q / n); })();
@@ -63,9 +67,38 @@
         const len = [0]; for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]));
         return { pts, len, L: len[len.length - 1] };
       }
+      const lens = (pts) => { const len = [0]; for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2])); return len; };
+      const route = (pts) => { const len = lens(pts); return { pts, len, L: len[len.length - 1] }; };
+      function towMission(st, ty) {                              // vlek: na práh před kluzák (čeká), vzlet, vypnutí na začátku po větru, okruh a přistání
+        const T = TYPY[ty], V = T.V, Dd = T.D, Hc = HK * T.H, td = 90 + rnd(st[0]) * 60;
+        const out = [[st[0], st[1], 0, 8], [A[0] - u[0] * 10 + n[0] * 30, A[1] - u[1] * 10 + n[1] * 30, 0, 8], P(0, 0, 0, 3)];
+        const air = [P(LANO, 0, 0, 3), P(LANO + 300, 0, 0, V * 0.7), P(LANO + 420, 0, 6, V * 0.8), P(RL + 150, 0, Hc * 0.6, V * 0.8), P(RL + 380, Dd * 0.3, Hc * 0.85, V * 0.8),
+          P(RL + 420, Dd, Hc, V * 0.8, 2), P(RL * 0.5, Dd, Hc * 0.8, V), P(-420, Dd, Hc * 0.7, V), P(-600, Dd * 0.75, Hc * 0.6, V * 0.9), P(-620, Dd * 0.15, Hc * 0.45, V * 0.85),
+          P(-460, 0, Hc * 0.32, V * 0.8), P(0, 0, 9, V * 0.75), P(td, 0, 0, V * 0.62), P(td + 300, 0, 0, 8), P(td + 320, 30, 0, 8)];
+        const pts = [...out, ...smooth(air), [st[0], st[1], 0, 8], [st[0] + u[0] * 2, st[1] + u[1] * 2, 0, 1]];
+        const r = route(pts);
+        r.hold = r.len[3]; r.rel = r.len[pts.findIndex((q) => q[4] === 2)];            // čekání na kluzák, místo vypnutí
+        return r;
+      }
+      const pushMission = (from, to) => route([[from[0], from[1], 0, 6], [to[0], to[1], 0, 6],   // auto odtáhne kluzák na práh
+         [to[0] + u[0] * 0.5, to[1] + u[1] * 0.5, 0, 1]]);
+      function glideMission(o, st) {                             // po vypnutí: kroužení ve stoupavém proudu, okruh, přistání, odtlačení na stání
+        const T = TYPY.kluzak, V = T.V, Dd = T.D, z0 = Math.max(60, o.z), td = 60 + rnd(st[1]) * 80;
+        const C = [o.x + n[0] * 260 - u[0] * 150, o.y + n[1] * 260 - u[1] * 150], R = 120, a0 = Math.atan2(o.y - C[1], o.x - C[0]);
+        const air = [[o.x, o.y, o.z, V, 0]];
+        for (let k = 1; k <= 32; k++) { const a = a0 + side * k / 8 * Math.PI; air.push([C[0] + Math.cos(a) * R, C[1] + Math.sin(a) * R, z0 * (1 + 0.3 * Math.sin(k / 32 * Math.PI * 0.75)), V, 0]); }
+        air.push(P(RL * 0.6, Dd, z0 * 0.9, V), P(-300, Dd, z0 * 0.6, V), P(-450, Dd * 0.6, z0 * 0.45, V), P(-460, Dd * 0.1, z0 * 0.32, V),
+                 P(-300, 0, z0 * 0.2, V), P(0, 0, 5, V * 0.9), P(td, 0, 0, V * 0.6), P(td + 110, 0, 0, 3));
+        const sm = smooth(air), e = sm[sm.length - 1];
+        return route([...sm, [e[0] + u[0] * 6, e[1] + u[1] * 6, 0, 6], [st[0], st[1], 0, 6], [st[0] + u[0] * 0.5, st[1] + u[1] * 0.5, 0, 1]]);
+      }
       const fleet = D.letadla || [{ typ: 'c172', stani: 0 }, { typ: 'ul', stani: 1 }, { typ: 'an2', stani: 2 }, { typ: 'ul', stani: 3, leta: false }];
       const planes = fleet.map((f, i) => ({ ty: TYPY[f.typ] ? f.typ : 'c172', st: stani[(f.stani ?? i) % stani.length], fly: f.leta !== false,
-        m: null, s: 0, wait: 15 + i * 40 + rnd(i + 9) * 30, i, hdg: [u[0], u[1]] }));
+        m: null, s: 0, wait: 15 + i * 40 + rnd(i + 9) * 30, i, hdg: [u[0], u[1]], vlek: f.vlek, faze: null, tah: null }));
+      for (const p of planes) if (TYPY[p.ty].glider) {                 // kluzák potřebuje vlečné letadlo; bez něj jen stojí
+        const v = planes[p.vlek] && !TYPY[planes[p.vlek].ty].glider ? planes[p.vlek] : planes.find((q) => !TYPY[q.ty].glider && q.fly);
+        if (v) p.tow = v; else p.fly = false;
+      }
       let chutes = [], busy = 0;
       const SPR = new Map();
       function sprite(ty, k) {
@@ -97,6 +130,17 @@
           for (const t of [-w * 0.55, w * 0.55]) { box(l - 2.9, l - 2.75, t - 0.05, t + 0.05, 0.98, 3.75, DK); box(l - 1.75, l - 1.6, t - 0.05, t + 0.05, 0.98, 3.75, DK); }   // vzpěry
           box(-l + 0.3, -l + 2.2, -3.6, 3.6, 2.0, 2.15, C);                                       // vodorovné ocasní plochy (7,2 m)
           box(-l + 0.2, -l + 2.0, -0.08, 0.08, 2.1, 4.6, C); box(-l + 0.2, -l + 1.0, -0.09, 0.09, 3.6, 4.6, S);   // vysoká kýlovka
+        } else if (ty === 'kluzak') {
+          // kluzák (typu Blaník / LS): štíhlý trup, dlouhé úzké křídlo 15 m, T-ocasní plochy, jedno kolo pod trupem
+          box(0.1, 0.5, -0.1, 0.1, 0, 0.35, DK);                                                   // hlavní kolo
+          box(-l, -l + 3.6, -0.22, 0.22, 0.45, 0.85, C);                                          // zúžená ocasní část
+          box(-l + 3.6, l - 0.6, -0.36, 0.36, 0.3, 1.0, C);                                       // trup s kabinou
+          box(l - 0.6, l, -0.22, 0.22, 0.45, 0.85, C);                                            // příď
+          box(0.6, 2.4, -0.33, 0.33, 1.0, 1.32, GL);                                              // dlouhý překryt kabiny
+          box(-0.3, 0.6, -w, w, 0.95, 1.05, C);                                                  // křídlo 15 m
+          box(-0.3, 0.3, -w, -w + 0.8, 0.96, 1.06, S); box(-0.3, 0.3, w - 0.8, w, 0.96, 1.06, S);  // červené konce
+          box(-l, -l + 0.9, -0.07, 0.07, 0.85, 2.0, C);                                           // kýlovka
+          box(-l, -l + 0.7, -1.5, 1.5, 2.0, 2.08, C);                                             // vodorovná plocha nahoře (T)
         } else if (ty === 'c172') {
           // Cessna 172: hornoplošník se vzpěrami, příďový podvozek s kryty kol
           box(l - 0.8, l - 0.5, -0.09, 0.09, 0, 0.6, DK);                                          // příďové kolo
@@ -142,7 +186,13 @@
         g.putImageData(im, 0, 0);
         const spr = { c: cv, x0, y0 }; SPR.set(key, spr); return spr;
       }
+      const poseAt = (m, s) => {
+        let i = 1; while (i < m.len.length - 1 && m.len[i] < s) i++;
+        const a = m.pts[i - 1], b = m.pts[i], f = Math.max(0, Math.min(1, (s - m.len[i - 1]) / ((m.len[i] - m.len[i - 1]) || 1)));
+        return { x: a[0] + (b[0] - a[0]) * f, y: a[1] + (b[1] - a[1]) * f, z: a[2] + (b[2] - a[2]) * f, dx: b[0] - a[0], dy: b[1] - a[1], v: a[3] + (b[3] - a[3]) * f };
+      };
       const pose = (p) => {
+        if (p.faze === 'vlek') return poseAt(p.tow.m, Math.max(0, p.tow.s - LANO));
         if (!p.m) return { x: p.st[0], y: p.st[1], z: 0, dx: p.hdg[0], dy: p.hdg[1] };
         const m = p.m; let i = 1; while (i < m.len.length - 1 && m.len[i] < p.s) i++;
         const a = m.pts[i - 1], b = m.pts[i], f = Math.max(0, Math.min(1, (p.s - m.len[i - 1]) / ((m.len[i] - m.len[i - 1]) || 1)));
@@ -150,19 +200,31 @@
       };
       function step(dt, night, snowy, t) {
         for (const p of planes) {
+          if (p.faze === 'vlek') {                                       // na laně: poloha podle vlečného letadla
+            if (p.tow.s >= p.tow.m.rel) { const o = pose(p); p.m = glideMission(o, p.st); p.s = 0; p.faze = 'let'; p.tow.tah = null; }
+            continue;
+          }
           if (!p.m) {
             if (!p.fly || night > 0.45 || (snowy && p.ty !== 'c172')) continue;
             p.wait -= dt;
             if (p.wait > 0 || t < busy) continue;
+            if (TYPY[p.ty].glider) {                                     // kluzák: odtlačit na práh a zavolat vlek
+              if (p.tow.m || !p.tow.fly) continue;
+              p.m = pushMission(p.st, A); p.s = 0; p.faze = 'tlak';
+              p.tow.m = towMission(p.tow.st, p.tow.ty); p.tow.s = 0; p.tow.tah = p; busy = t + 150;
+              continue;
+            }
             p.m = mission(p.st, p.ty); p.s = 0; busy = t + 45;               // dráhu drží 45 s, ať nestartují dva naráz
           }
           const prev = p.s, o = pose(p); p.s += Math.max(1, o.v) * dt;
+          if (p.tah && p.tah.faze === 'tlak' && p.s > p.m.hold) p.s = p.m.hold;   // vlek čeká na prahu, než kluzák dojede
+          if (p.faze === 'tlak' && p.s >= p.m.L) { p.faze = 'vlek'; p.m = null; continue; }
           const m = p.m;
           for (let k = 1; k < m.pts.length; k++) if (m.pts[k][4] === 1 && prev < m.len[k] && p.s >= m.len[k]) {
             for (let j = 0; j < 6; j++) chutes.push({ x: m.pts[k][0] - u[0] * j * 25, y: m.pts[k][1] - u[1] * j * 25, z: m.pts[k][2], ff: 2 + j * 0.4 + rnd(t + j) * 2,
               tx: dz[0] + (rnd(j * 3 + t) - 0.5) * 60, ty: dz[1] + (rnd(j * 7 + t) - 0.5) * 60, col: CHUTE[(j + Math.floor(t)) % CHUTE.length], land: 0 });
           }
-          if (p.s >= m.L) { p.m = null; p.wait = 60 + rnd(t + p.i) * 150; p.hdg = [u[0], u[1]]; }
+          if (p.s >= m.L) { p.m = null; p.faze = null; p.tah = null; p.wait = 60 + rnd(t + p.i) * 150; p.hdg = [u[0], u[1]]; }
         }
         for (const c of chutes) {
           if (c.land) { c.land += dt; continue; }
@@ -178,6 +240,12 @@
         step(Math.min(0.1, view.dt || 0), view.night, view.snowy, t);
         if (view.sx <= 0.12) return;
         const { sx, ox, oy } = view;
+        for (const p of planes) if (p.faze === 'vlek') {                 // vlečné lano
+          const a = pose(p.tow), b = pose(p), ia = toImg(a.x, a.y, gz(a.x, a.y) + a.z + 1), ib = toImg(b.x, b.y, gz(b.x, b.y) + b.z + 1);
+          if (!view.vis(ia[0], ia[1], 200)) continue;
+          ctx.strokeStyle = 'rgba(40,40,44,.55)'; ctx.lineWidth = Math.max(1, sx * 0.6);
+          ctx.beginPath(); ctx.moveTo(ox + ia[0] * sx, oy + ia[1] * sx); ctx.lineTo(ox + ib[0] * sx, oy + ib[1] * sx); ctx.stroke();
+        }
         for (const aloft of [false, true]) for (const p of planes) {
           const o = pose(p); if ((o.z > 0.5) !== aloft) continue;
           const g = gz(o.x, o.y), [ix, iy] = toImg(o.x, o.y, g + o.z);

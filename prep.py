@@ -1671,6 +1671,16 @@ for _o in OBL.values():                      # "skryt": změřené stromy na kon
     for la, lo, hh, con in _o['trees']:
         x, y = (float(v) for v in to_local(lo, la))
         if EXT_P.contains(Point(x, y)): T.append((x, y, hh, con, 0))
+if os.path.exists('assets/doplnky/letiste.json'):   # letiště: na dráze a odstavné ploše žádné náhodné stromy
+    _L0 = json.load(open('assets/doplnky/letiste.json', encoding='utf-8')); _ap = []
+    for dr in _L0.get('drahy', []):
+        (ax, ay), (bx, by) = to_local(dr['a'][1], dr['a'][0]), to_local(dr['b'][1], dr['b'][0])
+        _ap.append(LineString([(ax, ay), (bx, by)]).buffer(dr.get('sirka', 24) / 2 + 15, cap_style=2))   # + ochranný pás
+    if _L0.get('odstavna'): _ap.append(Polygon([to_local(q[1], q[0]) for q in _L0['odstavna']]).buffer(4))
+    if _ap:
+        _apq = shapely.prepared.prep(shapely.unary_union(_ap)); _n0 = len(T)
+        T = [t for t in T if not _apq.contains(Point(t[0], t[1]))]
+        print('stromů na letišti odstraněno', _n0 - len(T))
 # koruna nesmí sahat do vozovky, kudy jezdí auta (jinak auta „projíždějí stromy“): strom pryč, když je střed blíž než
 # půl šířky silnice + poloměr koruny (listnatý ~0,33 h, jehličnan ~0,2 h). Platí i pro mostovky a nájezdy.
 _drv = [(l, w) for _a, l, c, w, _n in roads if c in DRIVE and c != 'service'] + [(D[0], D[4]) for D in DECKS if D[6] in DRIVE and D[6] != 'service']
