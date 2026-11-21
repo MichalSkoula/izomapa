@@ -1,0 +1,5 @@
+/* Kyjov: vlastní úpravy panelu (nápověda v panelu místo dialogu). Samostatný soubor, aby nekolidoval s upstreamem. */
+.about strong, .about b { color: var(--ink); }
+.about ul { margin: 6px 0 0; padding-left: 16px; font-size: .8rem; line-height: 1.45; color: var(--muted); }
+.about li { margin: 3px 0; }
+.about .app-btn { margin-top: 8px; }
