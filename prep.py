@@ -1138,8 +1138,8 @@ for _, r in bld.iterrows():
         hgt = r.height if r.height == r.height and r.height else None
         lm = None
         if c == 'chapel': lm = 'chapel'
-        if c in ('church', 'cathedral') and area > 60: lm = 'church'       # každý kostel má věž
         _dm = DOM_BY_ID.get(r.id)
+        if c in ('church', 'cathedral') and area > 60 and not (_dm and 'towers' in _dm['spec']): lm = 'church'   # každý kostel má věž (vlastní věže z dominanty ji nahradí)
         if _dm and _dm['spec'].get('lm'): lm = _dm['spec']['lm']          # vlastní model z dominanty (např. radnice)
         hits = addr_tree.query(p.buffer(1.5))
         adrs = sorted({addr_txt[i] for i in hits if p.buffer(1.5).contains(addr_pts[i])})

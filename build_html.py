@@ -66,6 +66,7 @@ def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=Fal
     obrazek_url = urljoin(site_url + '/', og_cesta) if site_url else ''
     mhd = M.get('mhd') or {}
     pohled = M.get('pohled')
+    prov = M.get('provozovatel') or {}        # kdo mapu hostuje: {"jmeno", "url"} (nepovinné)
     strom = M.get('vanocni_strom')
     fill = {
         'TITULEK': E(M['titulek']), 'POPIS': E(M['popis']), 'MESTO': E(M['nazev']), 'H1_A': E(M['h1'][0]), 'H1_B': E(M['h1'][1]),
@@ -85,6 +86,8 @@ def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=Fal
         'LETADLA_ZDROJ': ', letadla © <a href="https://adsb.lol/" target="_blank" rel="noopener">adsb.lol</a> (ODbL)' if M.get('letadla', False) else '',
         'MHD_ZDROJ': f', jízdní řády MHD © <a href="{E(mhd["zdroj_url"])}" target="_blank" rel="noopener">{E(mhd["zdroj"])}</a>'
                      if mhd.get('gtfs') and mhd.get('zdroj') else '',
+        'PROVOZOVATEL': (f' Tuto mapu hostuje <a href="{E(prov["url"])}" target="_blank" rel="noopener">{E(prov["jmeno"])}</a>.' if prov.get('url')
+                         else f' Tuto mapu hostuje {E(prov["jmeno"])}.') if prov.get('jmeno') else '',
     }
     app = re.sub(r'\{\{(\w+)\}\}', lambda m: fill[m.group(1)], SABLONA)
     og = f'''<meta property="og:image" content="{E(obrazek_url)}">
@@ -103,7 +106,7 @@ def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=Fal
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#1b2333">
+{(M.get('head_html') or '').strip() + chr(10) if M.get('head_html') else ''}<meta name="theme-color" content="#1b2333">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
