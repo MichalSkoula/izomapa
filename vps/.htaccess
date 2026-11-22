@@ -1,3 +1,5 @@
 # Apache (Forpsi VPS): api/pluhy -> api/pluhy.php (sypače ŘSD). Potřebuje mod_rewrite a AllowOverride FileInfo.
+# Bez MultiViews: jinak požadavek na api/pluhy zachytí mod_negotiation (vedle leží pluhy.php) a vrátí 404 dřív, než se uplatní rewrite.
+Options -MultiViews
 RewriteEngine On
 RewriteRule ^api/pluhy$ api/pluhy.php [L,QSA]
