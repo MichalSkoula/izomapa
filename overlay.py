@@ -295,6 +295,7 @@ elif os.path.exists('sousedi.json'):
 for o in OBCE:
     for s in (o.get('sousedi') or o.get('neighbors') or []):
         SOUS_RAW.append({**s, 'obec': s.get('obec') or o.get('nazev')})
+OFF = (0.0, 0.0)        # dál už společné souřadnice (místa, sousedé, čtvrti, strom): bez posunu posledního čtverce
 def gz(x, y):
     for gr in grounds:
         lx, ly = x - gr['cx'], y - gr['cy']
