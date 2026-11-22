@@ -16,6 +16,7 @@
   // vjezd na kruhový objezd: auto dá přednost autům na okruhu (25 m před vjezdem nebo právě v něm)
   function yieldZ(r, y) {
     const e = y[0] < 1 ? r.w[0] : r.w[r.w.length - 1], z = [y[0]];
+    z.t = y[0] < 1 ? -1 : 1;                // jen pro směr k okruhu: auto vyjíždějící z okruhu by jinak čekalo samo na sebe a zablokovalo okruh
     z.rb = { k: y[1].toFixed(0) + ',' + y[2].toFixed(0), cx: y[1], cy: y[2], R: y[3], an: Math.atan2(e[1] - y[2], e[0] - y[1]) };
     return z;
   }
