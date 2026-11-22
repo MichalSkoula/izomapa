@@ -1,0 +1,3 @@
+# Apache (Forpsi VPS): api/pluhy -> api/pluhy.php (sypače ŘSD). Potřebuje mod_rewrite a AllowOverride FileInfo.
+RewriteEngine On
+RewriteRule ^api/pluhy$ api/pluhy.php [L,QSA]
