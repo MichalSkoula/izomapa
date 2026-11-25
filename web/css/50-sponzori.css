@@ -3,7 +3,7 @@
   position: fixed; z-index: 3;
   top: calc(env(safe-area-inset-top, 0px) + 16px);
   right: max(16px, env(safe-area-inset-right, 0px));
-  max-width: 240px; box-sizing: border-box;
+  max-width: calc(100vw - 420px); box-sizing: border-box;
   background: var(--panel); border: 2px solid var(--edge); box-shadow: 4px 4px 0 rgba(0, 0, 0, .35);
   padding: 10px 14px 12px; display: grid; gap: 6px;
 }
@@ -13,6 +13,7 @@
 .sponzori img { display: block; max-width: 100%; max-height: 48px; }
 .sponzori .sp { display: grid; gap: 2px; }
 .sp-popis { display: block; color: var(--muted); font-size: .8rem; line-height: 1.35; }
+.sponzori .sp-popis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* v rámečku na jeden řádek */
 .sponzori-panel { display: none; }
 @media (max-width: 640px) {
   .sponzori { display: none; }
