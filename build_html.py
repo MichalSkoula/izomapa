@@ -67,7 +67,7 @@ E = lambda t: html.escape(t or '', quote=True)
 
 def sponzori(M):
     """odkazy na sponzory z mesto.json: "sponzori": {"nadpis": "Sponzoři", "odkazy": [{"nazev", "url", "logo"}]} (nebo rovnou seznam odkazů).
-    Na počítači rámeček vpravo nahoře, na telefonu v sekci O projektu. "logo" je cesta k obrázku (např. assets/sponzori/firma.png),
+    Na počítači rámeček vpravo nahoře, na telefonu rozbalovací sekce pod O projektu. "logo" je cesta k obrázku (např. assets/sponzori/firma.png),
     zkopíruje se do site/sponzori/."""
     S = M.get('sponzori') or {}
     if isinstance(S, list): S = {'odkazy': S}
@@ -83,7 +83,8 @@ def sponzori(M):
         return f'<a href="{E(o["url"])}" target="_blank" rel="noopener sponsored">{obsah}</a>'
     html = ''.join(odkaz(o) for o in odkazy)
     return {'SPONZORI': f'<aside class="sponzori" aria-label="{nadpis}"><p class="label">{nadpis}</p>{html}</aside>',
-            'SPONZORI_PANEL': f'<p class="sponzori-panel"><strong>{nadpis}:</strong> ' + ', '.join(odkaz(o) for o in odkazy) + '</p>'}
+            'SPONZORI_PANEL': f'  <details class="about sponzori-panel">\n    <summary>{nadpis}</summary>\n    <ul>'
+                              + ''.join(f'<li>{odkaz(o)}</li>' for o in odkazy) + '</ul>\n  </details>\n'}
 
 
 def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=False, page_url=None):
