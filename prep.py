@@ -352,12 +352,12 @@ for q in UP['paved']: fill(Polygon([to_local(lo, la) for la, lo in q]), C['paved
 
 wat = load('water')
 POTOKY = bool(geo.MESTO.get('potoky'))           # potoky (waterway=stream) jen na přání: v datech často vedou pod zemí (zatrubněné)
-def podzemni(r):                                 # zatrubněný / podzemní úsek vodního toku (OSM tunnel=culvert|yes, layer < 0): nekreslí se
+def podzemni(r):                                 # zatrubněný / podzemní úsek vodního toku (OSM tunnel=culvert|yes, layer < 0)
     st = dict(r['source_tags']) if r.get('source_tags') is not None else {}
     try: lay = float(st.get('layer', 0))
     except ValueError: lay = 0
     return st.get('tunnel') in ('yes', 'culvert', 'flooded') or lay < 0
-def carkovane(g, c, w, on=3.0, off=3.0):          # přerušovaná čára (zatrubněný potok): úseky po délce ve světových souřadnicích
+def carkovane(g, c, w, on=3.0, off=3.0):          # přerušovaná čára (zatrubněný potok): úseky po délce celé čáry, na švech navazují
     for l in lines(g):
         s = 0.0
         while s < l.length:
