@@ -1,12 +1,14 @@
-  // Zvýraznění MHD (přepínač „Zvýraznit MHD“): nad každým vozem MHD bublina s číslem linky v barvě typu
-  // (autobus modře, tramvaj červeně, vlak zeleně) a pod ní pulzující kroužek. Vidět i při oddálení, kdy se vozidla nekreslí,
-  // a i za budovou. Kliknutím na bublinu se vůz začne sledovat (MHD.drawn). Polohy sbírá smyčka MHD v 89-kresleni.js.
+  // Zvýraznění MHD a sypačů (přepínač „Zvýraznit MHD a sypače“): nad každým vozem MHD bublina s číslem linky v barvě typu
+  // (autobus modře, tramvaj červeně, vlak zeleně), nad sypačem ŘSD oranžová bublina „Sypač“, pod bublinou pulzující kroužek.
+  // Vidět i při oddálení, kdy se vozidla nekreslí, a i za budovou. Kliknutím na bublinu MHD se vůz začne sledovat (MHD.drawn).
+  // Polohy sbírá smyčka MHD v 89-kresleni.js a stepDrawPlows v 85-sypace.js. Výchozí stav: vypnuto.
   const MHD_HL = { pts: [], img: new Map() };
-  const mhdHl = () => MHD.on && $('l-mhdhl').checked;
+  const mhdHl = () => $('l-mhdhl').checked;
+  if (PLOW.on) $('l-mhdhl-w').hidden = false;
   { const t = setInterval(() => { if (MHD.on) { $('l-mhdhl-w').hidden = false; clearInterval(t); } }, 500); setTimeout(() => clearInterval(t), 60000); }
   try { if (localStorage.getItem('izomapa-mhdhl') === '1') $('l-mhdhl').checked = true; } catch (e) {}
   $('l-mhdhl').addEventListener('change', (e) => { try { localStorage.setItem('izomapa-mhdhl', e.target.checked ? '1' : '0'); } catch (er) {} });
-  const MHD_HL_BARVA = (typ) => (typ === 0 ? '#c4352b' : typ === 2 ? '#2f7d4f' : '#1f6fb2');
+  const MHD_HL_BARVA = (typ) => (typ === 'p' ? '#d9650f' : typ === 0 ? '#c4352b' : typ === 2 ? '#2f7d4f' : '#1f6fb2');
   function mhdHlBublina(line, typ, dpr) {                  // obrázek bubliny (ve fyzických pixelech), střed špičky dole uprostřed
     const key = `${line}|${typ}|${dpr}`; let c = MHD_HL.img.get(key); if (c) return c;
     if (MHD_HL.img.size > 300) MHD_HL.img.clear();
@@ -36,7 +38,7 @@
     for (const [x, y, line, typ, i] of P) {
       const c = mhdHlBublina(line, typ, dpr), bx = x - c.W / 2 + 1, by = y - 10 - c.H;   // špička 10 px nad vozem
       ctx.drawImage(c, Math.round(bx * dpr), Math.round(by * dpr));
-      MHD.drawn.push([Math.round(x), Math.round(by + 12), i]);                          // klik na bublinu = sledovat vůz
+      if (i !== null) MHD.drawn.push([Math.round(x), Math.round(by + 12), i]);         // klik na bublinu = sledovat vůz MHD
     }
     ctx.restore();
   }

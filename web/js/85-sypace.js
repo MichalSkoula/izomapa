@@ -2,7 +2,6 @@
   // Polohy chodí po ~5 s, mezi nimi vůz plynule dojíždí. Trasy za posledních 12 h se kreslí na silnici: oranžově
   // zásah (posyp, pluh) podle stáří, šedě pojezd bez zásahu. Vůz je oranžový nákladní sypač s radlicí a majákem.
   const PLOW = { on: {{PLUHY}}, list: new Map(), trasy: [], last: 0, off: false };
-  if (PLOW.on) $('l-pluhy-w').hidden = false;
   const llW = (lon, lat) => [(lon - cam.lon0) * cam.kx, (lat - cam.lat0) * cam.ky];
   async function fetchPlows() {
     const pad = 0.12, la0 = (cam.lat0 - pad).toFixed(4), la1 = (cam.lat0 + pad).toFixed(4), lo0 = (cam.lon0 - pad * 1.6).toFixed(4), lo1 = (cam.lon0 + pad * 1.6).toFixed(4);
@@ -22,8 +21,6 @@
         q.tx = x; q.ty = y; q.v = p.v; q.z = p.z; q.s = p.s; q.seen = now;
       }
       for (const [id, q] of PLOW.list) if (!seen.has(id) && now - q.seen > 120000) PLOW.list.delete(id);
-      const inMap = [...PLOW.list.values()].filter((q) => Math.abs(q.tx) < 6000 && Math.abs(q.ty) < 6000).length;
-      $('pluhy-n').textContent = inMap ? `(${inMap})` : '';
     } catch {}
   }
   // vůz je sprite jako ostatní vozidla (80-vozidla.js, typ 11: oranžová Tatra s nástavbou, modrým pruhem, nádržemi a radlicí);
@@ -66,7 +63,9 @@
         q.trail.forEach(([x, y], i) => { const p = toImg(x, y, gz(x, y) + 0.3), X_ = ox + p[0] * sx, Y_ = oy + p[1] * sx; i ? ctx.lineTo(X_, Y_) : ctx.moveTo(X_, Y_); });
         ctx.stroke();
       }
-      if (sx > 0.06 && vis(...toImg(q.x, q.y, gz(q.x, q.y)), 60)) drawPlow(q, sx, ox, oy, t);
+      const pi = toImg(q.x, q.y, gz(q.x, q.y));
+      if (vis(...pi, 60) && mhdHl()) MHD_HL.pts.push([ox + pi[0] * sx, oy + pi[1] * sx - 8 * sx, 'Sypač', 'p', null]);   // bublina (88-zvyrazneni-mhd.js)
+      if (sx > 0.06 && vis(...pi, 60)) drawPlow(q, sx, ox, oy, t);
     }
   }
 

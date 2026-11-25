@@ -244,8 +244,8 @@
         ctx.globalAlpha = on; ctx.fillRect(X0 + Math.round(lx * k), Y0 + Math.round(ly * k), k, k); ctx.globalAlpha = 1;
       });
     }
-    // sypače a pluhy ŘSD (živě, jen s "pluhy": true v mesto.json)
-    if (PLOW.on && $('l-pluhy').checked) stepDrawPlows(dt, sx, ox, oy, vis, t, now);
+    // sypače a pluhy ŘSD (živě, jen s "pluhy": true v mesto.json), součást vrstvy Doprava
+    if (PLOW.on && $('l-traffic').checked) stepDrawPlows(dt, sx, ox, oy, vis, t, now);
     runFrameLayer('world', frameView, t);
     // svíčky na hřbitovech: večer; kolem Dušiček (30. 10.–10. 11.) skoro na každém hrobě, na Štědrý den na většině, jinak jen tu a tam.
     // Hřbitovní lampy jsou červené, žluté a bílé; plamen se mihotá, při přiblížení kolem něj malá záře
