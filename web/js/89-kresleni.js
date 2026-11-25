@@ -95,7 +95,7 @@
           const a = MHD.act.find((q) => q[0] === MHD.follow);
           if (a) { const o = mhdPos(MHD.trips[a[0]], a[2] ? 0 : a[1] + (now / 1000 - ns) - (busWait.get(a[0]) || 0)); viewer.viewport.panTo(new OpenSeadragon.Point(o.ix / W, o.iy / W), true); }
         }
-        if (sx > 0.12) for (const [i, el, ceka, poradi] of MHD.act) {
+        if (sx > 0.12 || mhdHl()) for (const [i, el, ceka, poradi] of MHD.act) {   // se zvýrazněním MHD (88-zvyrazneni-mhd.js) i oddáleně
           const trip = MHD.trips[i], [line, typ] = MHD.routes[trip[0]];
           let o = mhdPos(trip, ceka ? 0 : el + (now / 1000 - ns) - (typ === 2 ? 0 : busDelay(i, trip, el + (now / 1000 - ns), dt)));   // na konečné stojí
           const ods = ceka && typ === 0 ? odstavPos(trip, ceka, poradi) : null;
@@ -106,9 +106,11 @@
             else { const L_ = Math.hypot(o.dx, o.dy) || 1, x_ = o.x - o.dx / L_ * d_, y_ = o.y - o.dy / L_ * d_, z_ = gz(x_, y_), [ix_, iy_] = toImg(x_, y_, z_); o = { ...o, x: x_, y: y_, z: z_, ix: ix_, iy: iy_ }; }
           }
           if (!vis(o.ix, o.iy, 120) || !cam.grounds.some((q) => Math.abs(o.x - q.cx) <= cam.half && Math.abs(o.y - q.cy) <= cam.half)) continue;   // mimo čtverce mapy
+          if (mhdHl()) MHD_HL.pts.push([ox + o.ix * sx, oy + o.iy * sx - 8 * sx, line, typ, i]);
+          if (sx <= 0.12) continue;
           const shown_ = typ === 0 ? drawVehicle(o, 15, 2.5, 't3', sx, ox, oy, night, 2) : typ === 2 ? drawTrain(trip, el + (now / 1000 - ns), line, sx, ox, oy, night) : drawVehicle(o, 12, 2.5, '#e9e6dc', sx, ox, oy, night, true);
           if (shown_) for (const q of typ === 2 ? drawTrain.pts : [o]) MHD.drawn.push([Math.round(ox + q.ix * sx), Math.round(oy + q.iy * sx) - Math.round(8 * sx), i]);
-          if (shown_ && (sx > 0.55 || i === MHD.follow)) {     // číslo linky nad vozidlem
+          if (shown_ && !mhdHl() && (sx > 0.55 || i === MHD.follow)) {     // číslo linky nad vozidlem (se zvýrazněním je v bublině)
             const h = gz(o.x, o.y), [tx, ty] = toImg(o.x, o.y, h + 6);
             cisloLinky(Math.round(ox + tx * sx), Math.round(oy + ty * sx), line, typ, i === MHD.follow);
           }
@@ -323,6 +325,7 @@
         ctx.restore(); ctx.globalAlpha = 1;
       }
     }
+    mhdHlDraw(now, dpr);                                  // bubliny nad MHD (88-zvyrazneni-mhd.js), nad vším kromě počasí
     // počasí
     if (state.weather === 'rain') {
       ctx.fillStyle = 'rgba(20,28,44,0.16)'; ctx.fillRect(0, 0, cw, ch);
