@@ -66,7 +66,7 @@ E = lambda t: html.escape(t or '', quote=True)
 
 
 def sponzori(M):
-    """odkazy na sponzory z mesto.json: "sponzori": {"nadpis": "Sponzoři", "odkazy": [{"nazev", "url", "popis", "logo"}]} (nebo rovnou seznam odkazů; popis a logo nepovinné).
+    """odkazy na sponzory z mesto.json: "sponzori": {"nadpis": "Sponzoři", "odkazy": [{"nazev", "url", "popis", "logo", "sponzorovany"}]} (nebo rovnou seznam odkazů; popis, logo nepovinné, "sponzorovany": false vynechá rel="sponsored").
     Na počítači rámeček vpravo nahoře, na telefonu rozbalovací sekce pod O projektu. "logo" je cesta k obrázku (např. assets/sponzori/firma.png),
     zkopíruje se do site/sponzori/."""
     S = M.get('sponzori') or {}
@@ -81,7 +81,8 @@ def sponzori(M):
             jmeno = os.path.basename(o['logo']); shutil.copyfile(o['logo'], f'site/sponzori/{jmeno}')
             obsah = f'<img src="sponzori/{E(jmeno)}" alt="{E(o.get("nazev") or "")}" loading="lazy">'
         popis = f'<span class="sp-popis">{E(o["popis"])}</span>' if o.get('popis') else ''      # nepovinný popisek pod názvem
-        return f'<a href="{E(o["url"])}" target="_blank" rel="noopener sponsored">{obsah}</a>{popis}'
+        rel = 'noopener sponsored' if o.get('sponzorovany', True) else 'noopener'                  # "sponzorovany": false = běžný odkaz (vlastní projekt)
+        return f'<a href="{E(o["url"])}" target="_blank" rel="{rel}">{obsah}</a>{popis}'
     html = ''.join(f'<div class="sp">{odkaz(o)}</div>' for o in odkazy)
     return {'SPONZORI': f'<aside class="sponzori" aria-label="{nadpis}"><p class="label">{nadpis}</p>{html}</aside>',
             'SPONZORI_PANEL': f'  <details class="about sponzori-panel">\n    <summary>{nadpis}</summary>\n    <ul>'
