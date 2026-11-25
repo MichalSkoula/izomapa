@@ -1,6 +1,6 @@
 """Z web/app.html + web/css + web/js (složí web/sestav.py) a mesto.json vyrobí site/index.html (texty, meta, sitemap).
 Pokud existuje složka obce/*.json, vyrobí pro každou obec i site/index_<obec>.html a site/obce/<obec>/og.jpg."""
-import html, json, math, os, re
+import html, json, math, os, re, shutil
 from urllib.parse import urljoin
 from PIL import Image
 import geo
@@ -65,6 +65,29 @@ def ikony_a_manifest(M):
 E = lambda t: html.escape(t or '', quote=True)
 
 
+def sponzori(M):
+    """odkazy na sponzory z mesto.json: "sponzori": {"nadpis": "Sponzoři", "odkazy": [{"nazev", "url", "popis", "logo"}]} (nebo rovnou seznam odkazů; popis a logo nepovinné).
+    Na počítači rámeček vpravo nahoře, na telefonu rozbalovací sekce pod O projektu. "logo" je cesta k obrázku (např. assets/sponzori/firma.png),
+    zkopíruje se do site/sponzori/."""
+    S = M.get('sponzori') or {}
+    if isinstance(S, list): S = {'odkazy': S}
+    odkazy = [o for o in S.get('odkazy') or [] if o.get('url') and (o.get('nazev') or o.get('logo'))]
+    if not odkazy: return {'SPONZORI': '', 'SPONZORI_PANEL': ''}
+    nadpis = E(S.get('nadpis') or 'Sponzoři')
+    def odkaz(o):
+        obsah = E(o.get('nazev') or '')
+        if o.get('logo'):
+            os.makedirs('site/sponzori', exist_ok=True)
+            jmeno = os.path.basename(o['logo']); shutil.copyfile(o['logo'], f'site/sponzori/{jmeno}')
+            obsah = f'<img src="sponzori/{E(jmeno)}" alt="{E(o.get("nazev") or "")}" loading="lazy">'
+        popis = f'<span class="sp-popis">{E(o["popis"])}</span>' if o.get('popis') else ''      # nepovinný popisek pod názvem
+        return f'<a href="{E(o["url"])}" target="_blank" rel="noopener sponsored">{obsah}</a>{popis}'
+    html = ''.join(f'<div class="sp">{odkaz(o)}</div>' for o in odkazy)
+    return {'SPONZORI': f'<aside class="sponzori" aria-label="{nadpis}"><p class="label">{nadpis}</p>{html}</aside>',
+            'SPONZORI_PANEL': f'  <details class="about sponzori-panel">\n    <summary>{nadpis}</summary>\n    <ul>'
+                              + ''.join(f'<li>{odkaz(o)}</li>' for o in odkazy) + '</ul>\n  </details>\n'}
+
+
 def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=False, page_url=None):
     site_url = (M.get('url') or '').rstrip('/')          # plná adresa webu (kvůli og:image a sitemap); prázdné = bez nich
     page_url = page_url or (site_url + '/' if site_url else '')
@@ -100,6 +123,7 @@ def postav_stranku(M, html_out='site/index.html', og_cesta='og.jpg', je_obec=Fal
         'MHD_ZDROJ': f', jízdní řády MHD © <a href="{E(mhd["zdroj_url"])}" target="_blank" rel="noopener">{E(mhd["zdroj"])}</a>'
                      if mhd.get('gtfs') and mhd.get('zdroj') else '',
     }
+    fill.update(sponzori(M))
     app = re.sub(r'\{\{(\w+)\}\}', lambda m: fill[m.group(1)], SABLONA)
     og = f'''<meta property="og:image" content="{E(obrazek_url)}">
 <meta property="og:url" content="{E(page_url)}">
