@@ -849,7 +849,7 @@ for l, w, c, n in drive_lines:
 # ---------------- budovy ----------------
 bld = load('building')
 # jen budovy z OpenStreetMap (nebo ručně potvrzené v upresneni.json)
-bld = bld[[(s is not None and any(x['dataset'] == 'OpenStreetMap' for x in s)) or i_ in UP['b'] for s, i_ in zip(bld.sources, bld.id)]].reset_index(drop=True)
+bld = bld[np.array([(s is not None and any(x['dataset'] == 'OpenStreetMap' for x in s)) or i_ in UP['b'] for s, i_ in zip(bld.sources, bld.id)], dtype=bool)].reset_index(drop=True)   # np.array: prázdný seznam by vybral sloupce
 bld = bld[~bld.id.isin(UP.get('skryt_budovy', []))].reset_index(drop=True)   # duplicitní budovy v datech (např. části kostela přes celý obrys)
 for i, r in bld.iterrows():                             # výšky z upřesnění mají přednost před daty
     if 'h' in UP['b'].get(r.id, {}): bld.at[i, 'height'] = UP['b'][r.id]['h']
@@ -946,7 +946,7 @@ def roof_parts(p, ang):
 
 
 addr = load('address')
-addr = addr[addr.geom.map(lambda g: EXT_P.contains(g))]
+addr = addr[np.array([EXT_P.contains(g) for g in addr.geom], dtype=bool)]
 addr_pts = list(addr.geom)
 addr_tree = shapely.STRtree(addr_pts)
 addr_txt = [f"{s} {n}" if isinstance(s, str) else f"{c} {n}" if isinstance(c, str) else str(n) for s, n, c in zip(addr.street, addr.number, addr.postal_city)]
