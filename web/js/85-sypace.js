@@ -3,6 +3,7 @@
   // zásah (posyp, pluh) podle stáří, šedě pojezd bez zásahu. Vůz je oranžový nákladní sypač s radlicí a majákem.
   const PLOW = { on: {{PLUHY}}, list: new Map(), trasy: [], last: 0, off: false };
   const llW = (lon, lat) => [(lon - cam.lon0) * cam.kx, (lat - cam.lat0) * cam.ky];
+  const naMape = (x, y) => cam.grounds.some((g) => Math.abs(x - g.cx) <= cam.half && Math.abs(y - g.cy) <= cam.half);
   async function fetchPlows() {
     const pad = 0.12, la0 = (cam.lat0 - pad).toFixed(4), la1 = (cam.lat0 + pad).toFixed(4), lo0 = (cam.lon0 - pad * 1.6).toFixed(4), lo1 = (cam.lon0 + pad * 1.6).toFixed(4);
     try {
@@ -10,7 +11,15 @@
       if (r.status === 404) { PLOW.off = true; return; }
       if (!r.ok) return;
       const d = await r.json(), now = performance.now(), seen = new Set();
-      PLOW.trasy = (d.trasy || []).map((t) => ({ a: t.a, z: t.z, w: t.l.map(([lo, la]) => { const [x, y] = llW(lo, la); return [x, y]; }) }));
+      PLOW.trasy = [];                                        // trasy jen po kusech na území mapy (API vrací širší okolí)
+      for (const t of d.trasy || []) {
+        let w = [];
+        for (const [lo, la] of t.l) {
+          const p = llW(lo, la);
+          if (naMape(...p)) w.push(p); else { if (w.length > 1) PLOW.trasy.push({ a: t.a, z: t.z, w }); w = []; }
+        }
+        if (w.length > 1) PLOW.trasy.push({ a: t.a, z: t.z, w });
+      }
       for (const p of d.pts || []) {
         const [x, y] = llW(p.lon, p.lat); seen.add(p.id);
         let q = PLOW.list.get(p.id);
@@ -57,12 +66,14 @@
     for (const q of PLOW.list.values()) {
       const dx = q.tx - q.x, dy = q.ty - q.y, d = Math.hypot(dx, dy);
       if (d > 0.05) { const st = Math.min(d, Math.max((q.v || 30) / 3.6, d / 6) * dt); q.x += dx / d * st; q.y += dy / d * st; }
-      if (!q.trail.length || Math.hypot(q.x - q.trail[q.trail.length - 1][0], q.y - q.trail[q.trail.length - 1][1]) > 6) { q.trail.push([q.x, q.y]); if (q.trail.length > 300) q.trail.shift(); }
+      if (!naMape(q.x, q.y)) q.trail = [];                     // stopa jen po mapě
+      else if (!q.trail.length || Math.hypot(q.x - q.trail[q.trail.length - 1][0], q.y - q.trail[q.trail.length - 1][1]) > 6) { q.trail.push([q.x, q.y]); if (q.trail.length > 300) q.trail.shift(); }
       if (q.trail.length > 1 && q.z === 0) {                   // čerstvá stopa vozu (od otevření mapy)
         ctx.strokeStyle = 'rgba(255,140,20,0.9)'; ctx.lineWidth = Math.max(1.5, sx * 5); ctx.beginPath();
         q.trail.forEach(([x, y], i) => { const p = toImg(x, y, gz(x, y) + 0.3), X_ = ox + p[0] * sx, Y_ = oy + p[1] * sx; i ? ctx.lineTo(X_, Y_) : ctx.moveTo(X_, Y_); });
         ctx.stroke();
       }
+      if (!naMape(q.x, q.y)) continue;                         // vůz mimo mapu se nekreslí (dojíždění a stopa běží dál)
       const pi = toImg(q.x, q.y, gz(q.x, q.y));
       if (vis(...pi, 60) && mhdHl()) MHD_HL.pts.push([ox + pi[0] * sx, oy + pi[1] * sx - 8 * sx, 'Sypač', 'p', null]);   // bublina (88-zvyrazneni-mhd.js)
       if (sx > 0.06 && vis(...pi, 60)) drawPlow(q, sx, ox, oy, t);
